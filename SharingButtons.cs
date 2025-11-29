@@ -2,7 +2,6 @@ using System;
 using System.Collections.Generic;
 using System.Linq;
 using System.Reflection;
-using System.Runtime.InteropServices;
 using UnityEngine;
 
 public class SharingButtons : MonoBehaviour
@@ -10,94 +9,16 @@ public class SharingButtons : MonoBehaviour
     public GearDetailsWindow window;
     private ModuleEquipSlots equipSlots;
 
-    private const uint CF_TEXT = 1;
-    private const uint GMEM_MOVEABLE = 0x2;
-
-    [DllImport("user32.dll", SetLastError = true, CharSet = CharSet.Auto)]
-    private static extern bool OpenClipboard(IntPtr hWndNewOwner);
-
-    [DllImport("user32.dll", SetLastError = true)]
-    private static extern bool CloseClipboard();
-
-    [DllImport("user32.dll", SetLastError = true)]
-    private static extern IntPtr GetClipboardData(uint uFormat);
-
-    [DllImport("user32.dll", SetLastError = true)]
-    private static extern bool EmptyClipboard();
-
-    [DllImport("user32.dll", SetLastError = true)]
-    private static extern IntPtr SetClipboardData(uint uFormat, IntPtr data);
-
-    [DllImport("kernel32.dll", SetLastError = true)]
-    private static extern IntPtr GlobalAlloc(uint uFlags, UIntPtr dwBytes);
-
-    [DllImport("kernel32.dll", SetLastError = true)]
-    private static extern IntPtr GlobalLock(IntPtr hMem);
-
-    [DllImport("kernel32.dll", SetLastError = true)]
-    private static extern bool GlobalUnlock(IntPtr hMem);
+    // Using Unity's built-in clipboard API - no P/Invoke needed
 
     private static string Clipboard_GetText()
     {
-        if (!OpenClipboard(IntPtr.Zero))
-            return null;
-
-        try
-        {
-            IntPtr ptr = GetClipboardData(CF_TEXT);
-            if (ptr == IntPtr.Zero)
-                return null;
-
-            IntPtr locked = GlobalLock(ptr);
-            if (locked == IntPtr.Zero)
-                return null;
-
-            try
-            {
-                return Marshal.PtrToStringAnsi(locked);
-            }
-            finally
-            {
-                GlobalUnlock(ptr);
-            }
-        }
-        finally
-        {
-            CloseClipboard();
-        }
+        return GUIUtility.systemCopyBuffer;
     }
 
     private static void Clipboard_SetText(string text)
     {
-        if (!OpenClipboard(IntPtr.Zero))
-            return;
-
-        try
-        {
-            EmptyClipboard();
-            byte[] bytes = System.Text.Encoding.UTF8.GetBytes(text + '\0');
-            IntPtr hMem = GlobalAlloc(GMEM_MOVEABLE, (UIntPtr)bytes.Length);
-            if (hMem == IntPtr.Zero)
-                return;
-
-            IntPtr locked = GlobalLock(hMem);
-            if (locked != IntPtr.Zero)
-            {
-                try
-                {
-                    Marshal.Copy(bytes, 0, locked, bytes.Length);
-                }
-                finally
-                {
-                    GlobalUnlock(hMem);
-                }
-                SetClipboardData(CF_TEXT, hMem);
-            }
-        }
-        finally
-        {
-            CloseClipboard();
-        }
+        GUIUtility.systemCopyBuffer = text;
     }
 
     void OnGUI()

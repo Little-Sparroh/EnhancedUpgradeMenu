@@ -4,7 +4,7 @@ schemaVersion = "0.0.1"
 [package]
 namespace = "Sparroh"
 name = "EnhancedUpgradeMenu"
-description = "Enhances the upgrade management experience in MycoPunk with comparison mode, mass scrapping, filtering, and loadout expansion."
+description = "A comprehensive mod that massively enhances the upgrade management experience with powerful new functionality and improved usability."
 websiteUrl = "https://github.com/Little-Sparroh/EnhancedUpgradeMenu"
 containsNsfwContent = false
 
