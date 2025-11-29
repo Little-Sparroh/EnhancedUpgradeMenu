@@ -1,5 +1,18 @@
 # Changelog
 
+## 1.1.1 (2025-11-29)
+
+### Loadout System Enhancements
+* **Bidirectional Loadout Scrolling**: Independent left and right scrolling keys ("," and "." by default) replacing single toggle key
+* **Configurable Rename Keybind**: Customizable loadout rename key (L by default) with hot reload support
+* **Clean Tooltips**: Removed hardcoded key hint text from loadout tooltips for cleaner UI
+* **Precise Rename Activation**: Loadout renaming now only activates when hovering over specific loadout slots (no fallback)
+* **Enhanced Scrolling UX**: Loadout pages now reset to first page when opening any gear menu, with proper icon refresh
+
+### Technical Updates
+* **Loadout Persistence Fixes**: Improved name persistence logic to prevent interference between default and custom names
+* **UI Refresh System**: Added automatic icon refresh when page offset resets for consistent visual state
+
 ## 1.1.0 (2025-11-29)
 
 ### Major Features

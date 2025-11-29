@@ -2,6 +2,7 @@
 using System;
 using System.Reflection;
 using UnityEngine;
+using UnityEngine.InputSystem;
 
 [HarmonyPatch]
 public static class PlayerDataPatches
@@ -36,7 +37,18 @@ public static class PlayerDataPatches
     public static bool EquipLoadoutPrefix(ref PlayerData.GearData __instance, int index, ref object ___loadouts, ref bool __result)
     {
         Array loadoutsArray = ___loadouts as Array;
-        if (loadoutsArray == null || index < 0 || index >= loadoutsArray.Length)
+        if (loadoutsArray == null)
+        {
+            loadoutsArray = Array.CreateInstance(LoadoutType, Mathf.Max(index + 1, MAX_LOADOUT_SLOTS));
+            ___loadouts = loadoutsArray;
+        }
+        if (index >= loadoutsArray.Length)
+        {
+            Array newArray = Array.CreateInstance(LoadoutType, Mathf.Max(index + 1, MAX_LOADOUT_SLOTS));
+            loadoutsArray.CopyTo(newArray, 0);
+            ___loadouts = newArray;
+        }
+        if (index < 0 || index >= loadoutsArray.Length)
         {
             __result = false;
             return false;
@@ -279,6 +291,10 @@ public static class GearDetailsWindowPatches
     [HarmonyPostfix]
     public static void SetupPostfix(ref GearDetailsWindow __instance, IUpgradable upgradable)
     {
+        // Reset loadout page offset when opening a new gear menu
+        LoadoutExpanderMod.PageOffset = 0;
+        // Refresh the icons to display the correct loadouts for the new page
+        LoadoutExpanderMod.RefreshCurrentWindow();
 
         try
         {
@@ -362,19 +378,35 @@ public static class GearDetailsWindowPatches
     {
         if (upgradable != null)
         {
-            if (!LoadoutHoverInfoPatches.windowLoadoutNames.TryGetValue(__instance, out var windowNamesDict))
-            {
-                windowNamesDict = new System.Collections.Generic.Dictionary<int, string>();
-                LoadoutHoverInfoPatches.windowLoadoutNames[__instance] = windowNamesDict;
-            }
+            var playerDataType = typeof(PlayerData);
+            var instanceProp = playerDataType.GetProperty("Instance", BindingFlags.Public | BindingFlags.Static);
+            var playerDataInstance = instanceProp?.GetValue(null);
 
-            for (int i = 0; i < NEW_LOADOUT_COUNT; i++)
+            var getGearDataMethod = playerDataType.GetMethod("GetGearData", new Type[] { typeof(IUpgradable) });
+            var gearData = getGearDataMethod?.Invoke(playerDataInstance, new object[] { upgradable });
+
+            if (gearData != null)
             {
-                string key = $"{upgradable.Info.ID}_{i}";
-                string savedName = PlayerPrefs.GetString("LoadoutName_" + key, "");
-                if (!string.IsNullOrEmpty(savedName))
+                var gear = gearData.GetType().GetField("gear", BindingFlags.NonPublic | BindingFlags.Instance)?.GetValue(gearData) as IUpgradable;
+                if (gear != null)
                 {
-                    windowNamesDict[i] = savedName;
+                    if (!LoadoutHoverInfoPatches.windowLoadoutNames.TryGetValue(__instance, out var windowNamesDict))
+                    {
+                        windowNamesDict = new System.Collections.Generic.Dictionary<int, string>();
+                        LoadoutHoverInfoPatches.windowLoadoutNames[__instance] = windowNamesDict;
+                    }
+
+                    // Only load explicitly named loadouts, let GetLoadoutName handle defaults dynamically
+                    for (int i = 0; i < NEW_LOADOUT_COUNT; i++)
+                    {
+                        string key = $"{gear.Info.ID}_{i}";
+                        string savedName = PlayerPrefs.GetString("LoadoutName_" + key, "");
+                        if (!string.IsNullOrEmpty(savedName))
+                        {
+                            windowNamesDict[i] = savedName;
+                        }
+                        // Don't populate defaults on load - they should be generated dynamically
+                    }
                 }
             }
         }
@@ -402,6 +434,8 @@ public static class LoadoutHoverInfoPatches
     private static readonly System.Collections.Generic.Dictionary<int, string> loadoutNames =
         new System.Collections.Generic.Dictionary<int, string>();
 
+    public static Key RenameKey = Key.L;
+
     internal static readonly System.Collections.Generic.Dictionary<GearDetailsWindow, System.Collections.Generic.Dictionary<int, string>> windowLoadoutNames =
         new System.Collections.Generic.Dictionary<GearDetailsWindow, System.Collections.Generic.Dictionary<int, string>>();
 
@@ -420,17 +454,32 @@ public static class LoadoutHoverInfoPatches
             var upgradable = window.GetType().GetField("upgradable", BindingFlags.NonPublic | BindingFlags.Instance)?.GetValue(window) as IUpgradable;
             if (upgradable != null)
             {
-                string key = $"{upgradable.Info.ID}_{loadoutIndex}";
-                string savedName = PlayerPrefs.GetString("LoadoutName_" + key, "");
-                if (!string.IsNullOrEmpty(savedName))
+                var playerDataType = typeof(PlayerData);
+                var instanceProp = playerDataType.GetProperty("Instance", BindingFlags.Public | BindingFlags.Static);
+                var playerDataInstance = instanceProp?.GetValue(null);
+
+                var getGearDataMethod = playerDataType.GetMethod("GetGearData", new Type[] { typeof(IUpgradable) });
+                var gearData = getGearDataMethod?.Invoke(playerDataInstance, new object[] { upgradable });
+
+                if (gearData != null)
                 {
-                    if (!windowLoadoutNames.TryGetValue(window, out var namesDict))
+                    var gear = gearData.GetType().GetField("gear", BindingFlags.NonPublic | BindingFlags.Instance)?.GetValue(gearData) as IUpgradable;
+                    if (gear != null)
                     {
-                        namesDict = new System.Collections.Generic.Dictionary<int, string>();
-                        windowLoadoutNames[window] = namesDict;
+                        string key = $"{gear.Info.ID}_{loadoutIndex}";
+                        string savedName = PlayerPrefs.GetString("LoadoutName_" + key, "");
+                        Debug.Log($"Retrieving name for gear {gear.Info.ID} slot {loadoutIndex}: key='{key}' name='{savedName}'");
+                        if (!string.IsNullOrEmpty(savedName))
+                        {
+                            if (!windowLoadoutNames.TryGetValue(window, out var namesDict))
+                            {
+                                namesDict = new System.Collections.Generic.Dictionary<int, string>();
+                                windowLoadoutNames[window] = namesDict;
+                            }
+                            namesDict[loadoutIndex] = savedName;
+                            return savedName;
+                        }
                     }
-                    namesDict[loadoutIndex] = savedName;
-                    return savedName;
                 }
             }
         }
@@ -460,28 +509,43 @@ public static class LoadoutHoverInfoPatches
                 windowNames.Remove(loadoutIndex);
             }
 
-            try
+        try
+        {
+            var upgradable = window.UpgradablePrefab;
+            if (upgradable != null)
             {
-                var upgradable = window.UpgradablePrefab;
-                if (upgradable != null)
-                {
-                    string key = $"{upgradable.Info.ID}_{loadoutIndex}";
-                    if (!string.IsNullOrEmpty(newName))
-                    {
-                        PlayerPrefs.SetString("LoadoutName_" + key, newName);
-                        PlayerPrefs.Save();
+                var playerDataType = typeof(PlayerData);
+                var instanceProp = playerDataType.GetProperty("Instance", BindingFlags.Public | BindingFlags.Static);
+                var playerDataInstance = instanceProp?.GetValue(null);
 
-                        string altKey = $"ImprovedLoadouts_Name_{upgradable.Info.ID}_{loadoutIndex}";
-                        PlayerPrefs.SetString(altKey, newName);
-                        PlayerPrefs.Save();
-                    }
-                    else
+                var getGearDataMethod = playerDataType.GetMethod("GetGearData", new Type[] { typeof(IUpgradable) });
+                var gearData = getGearDataMethod?.Invoke(playerDataInstance, new object[] { upgradable });
+
+                if (gearData != null)
+                {
+                    var gear = gearData.GetType().GetField("gear", BindingFlags.NonPublic | BindingFlags.Instance)?.GetValue(gearData) as IUpgradable;
+                    if (gear != null)
                     {
-                        PlayerPrefs.DeleteKey("LoadoutName_" + key);
-                        PlayerPrefs.Save();
+                        string key = $"{gear.Info.ID}_{loadoutIndex}";
+                        Debug.Log($"Saving name for gear {gear.Info.ID} slot {loadoutIndex}: key='{key}' name='{newName}'");
+                        if (!string.IsNullOrEmpty(newName))
+                        {
+                            PlayerPrefs.SetString("LoadoutName_" + key, newName);
+                            PlayerPrefs.Save();
+
+                            string altKey = $"ImprovedLoadouts_Name_{gear.Info.ID}_{loadoutIndex}";
+                            PlayerPrefs.SetString(altKey, newName);
+                            PlayerPrefs.Save();
+                        }
+                        else
+                        {
+                            PlayerPrefs.DeleteKey("LoadoutName_" + key);
+                            PlayerPrefs.Save();
+                        }
                     }
                 }
             }
+        }
             catch (Exception persistenceEx)
             {
             }
@@ -669,14 +733,14 @@ public static class LoadoutHoverInfoPatches
                             string customName = GetLoadoutName(gearDetailsWindow, i);
                             if (!string.IsNullOrEmpty(customName))
                             {
-                                title = $"{customName} [L to rename]";
+                                title = customName;
                                 color = Color.white;
                                 __result = true;
                                 return;
                             }
                             else
                             {
-                                title = $"Loadout {i + 1} [L to rename]";
+                                title = $"Loadout {i + 1}";
                                 color = Color.white;
                                 __result = true;
                                 return;
@@ -929,7 +993,7 @@ public static void GearDetailsWindowUpdatePostfix(ref GearDetailsWindow __instan
         }
 
         var keyboard = UnityEngine.InputSystem.Keyboard.current;
-        if (keyboard != null && keyboard.lKey.wasPressedThisFrame)
+        if (keyboard != null && keyboard[RenameKey].wasPressedThisFrame)
         {
             Vector3 mousePos = UnityEngine.InputSystem.Mouse.current.position.ReadValue();
 
@@ -948,16 +1012,7 @@ public static void GearDetailsWindowUpdatePostfix(ref GearDetailsWindow __instan
                         return;
                     }
                 }
-
-                if (loadoutButtons.Length > 0)
-                {
-                    var firstButton = loadoutButtons.GetValue(0) as LoadoutHoverInfo;
-                    if (firstButton != null)
-                    {
-                        StartRenameProcess(firstButton, 0, __instance);
-                        return;
-                    }
-                }
+                // Only rename when hovering over a loadout slot - no fallback to first slot
             }
 
         }
@@ -1134,7 +1189,8 @@ public static void GearDetailsWindowUpdatePostfix(ref GearDetailsWindow __instan
             {
                 if (names.TryGetValue(index, out string name))
                 {
-                    string key = $"{gear.Info.ID}_{index}";
+                    string key = $"{gear.Info.ID}_{gear.GetHashCode()}_{index}";
+                    Debug.Log($"Persisting name for gear {gear.Info.ID} slot {index}: key='{key}' name='{name}'");
                     PlayerPrefs.SetString("LoadoutName_" + key, name);
                     PlayerPrefs.Save();
                 }

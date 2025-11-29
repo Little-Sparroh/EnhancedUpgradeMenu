@@ -12,10 +12,12 @@ public class SparrohPlugin : BaseUnityPlugin
 {
     public const string PluginGUID = "sparroh.enhancedupgrademenu";
     public const string PluginName = "EnhancedUpgradeMenu";
-    public const string PluginVersion = "1.1.0";
+    public const string PluginVersion = "1.1.1";
 
     private ConfigEntry<Key> TrashMarkKey;
-    private ConfigEntry<Key> ScrollerToggleKey;
+    private ConfigEntry<Key> ScrollLeftKey;
+    private ConfigEntry<Key> ScrollRightKey;
+    private ConfigEntry<Key> LoadoutRenameKey;
     private ConfigEntry<Key> CompareKey;
     private ConfigEntry<bool> EnableInstantScrapping;
     private ConfigEntry<bool> EnableFixedTimer;
@@ -38,9 +40,17 @@ public class SparrohPlugin : BaseUnityPlugin
         ScrapHandlingMod.ScrapMarkedAction = () => ScrapHandlingMod.TryScrapMarkedUpgrades(this);
         ScrapHandlingMod.ScrapNonFavoriteAction = () => ScrapHandlingMod.TryScrapNonFavoriteUpgrades(this);
 
-        ScrollerToggleKey = Config.Bind("Keybinds", "Change Loadout Page", Key.Period, "Key to toggle loadout pages");
-        LoadoutExpanderMod.ToggleHotkey = ScrollerToggleKey.Value;
-        ScrollerToggleKey.SettingChanged += (sender, args) => { LoadoutExpanderMod.ToggleHotkey = ScrollerToggleKey.Value; };
+        ScrollLeftKey = Config.Bind("Keybinds", "Scroll Loadout Left", Key.Comma, "Key to scroll to the left loadout page");
+        LoadoutExpanderMod.ScrollLeftKey = ScrollLeftKey.Value;
+        ScrollLeftKey.SettingChanged += (sender, args) => { LoadoutExpanderMod.ScrollLeftKey = ScrollLeftKey.Value; };
+
+        ScrollRightKey = Config.Bind("Keybinds", "Scroll Loadout Right", Key.Period, "Key to scroll to the right loadout page");
+        LoadoutExpanderMod.ScrollRightKey = ScrollRightKey.Value;
+        ScrollRightKey.SettingChanged += (sender, args) => { LoadoutExpanderMod.ScrollRightKey = ScrollRightKey.Value; };
+
+        LoadoutRenameKey = Config.Bind("Keybinds", "Rename Loadout", Key.L, "Key to rename the hovered loadout");
+        LoadoutHoverInfoPatches.RenameKey = LoadoutRenameKey.Value;
+        LoadoutRenameKey.SettingChanged += (sender, args) => { LoadoutHoverInfoPatches.RenameKey = LoadoutRenameKey.Value; };
 
         CompareKey = Config.Bind("Keybinds", "Toggle Compare", Key.C, "Key to compare upgrades");
         CompareHandling.CompareKey = CompareKey;
@@ -106,12 +116,17 @@ public class SparrohPlugin : BaseUnityPlugin
 
     private void Update()
     {
-        if (Keyboard.current != null && Keyboard.current[LoadoutExpanderMod.ToggleHotkey].wasPressedThisFrame)
+        if (Keyboard.current != null)
         {
-            LoadoutExpanderMod.TogglePage();
+            if (Keyboard.current[LoadoutExpanderMod.ScrollRightKey].wasPressedThisFrame)
+            {
+                LoadoutExpanderMod.ScrollRight();
+            }
+            else if (Keyboard.current[LoadoutExpanderMod.ScrollLeftKey].wasPressedThisFrame)
+            {
+                LoadoutExpanderMod.ScrollLeft();
+            }
         }
-
-
     }
 
     private void OnGUI()

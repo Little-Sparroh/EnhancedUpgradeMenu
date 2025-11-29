@@ -14,7 +14,8 @@ public static class LoadoutExpanderMod
     internal static FieldInfo _upgradableField;
     internal static MethodInfo _updateIconMethod;
 
-    public static Key ToggleHotkey;
+    public static Key ScrollLeftKey;
+    public static Key ScrollRightKey;
 
     public static void TogglePage()
     {
@@ -22,6 +23,22 @@ public static class LoadoutExpanderMod
         if (PageOffset > 6) PageOffset = 0;
 
         int pageNum = (PageOffset / 3) + 1;
+
+        RefreshCurrentWindow();
+    }
+
+    public static void ScrollRight()
+    {
+        PageOffset += 3;
+        if (PageOffset > 6) PageOffset = 0;
+
+        RefreshCurrentWindow();
+    }
+
+    public static void ScrollLeft()
+    {
+        PageOffset -= 3;
+        if (PageOffset < 0) PageOffset = 6;
 
         RefreshCurrentWindow();
     }
@@ -77,6 +94,16 @@ public static class LoadoutExpanderMod
 
     [HarmonyPatch(typeof(PlayerData.GearData), "IncrementLoadoutIcon")]
     public static class IncrementIconPatch
+    {
+        [HarmonyPrefix]
+        public static void Prefix(ref int index)
+        {
+            if (index < 3) index += LoadoutExpanderMod.PageOffset;
+        }
+    }
+
+    [HarmonyPatch(typeof(PlayerData.GearData), "SaveLoadout")]
+    public static class SaveLoadoutPatch
     {
         [HarmonyPrefix]
         public static void Prefix(ref int index)
@@ -151,17 +178,31 @@ public static class LoadoutExpanderMod
 
                     if (upgradable != null)
                     {
-                        string id = string.Format("{0}_{1}", upgradable.Info.ID, realIndex);
-                        displayName = PlayerPrefs.GetString("LoadoutName_" + id, "");
+                        var playerDataType = typeof(PlayerData);
+                        var instanceProp = playerDataType.GetProperty("Instance", BindingFlags.Public | BindingFlags.Static);
+                        var playerDataInstance = instanceProp?.GetValue(null);
+
+                        var getGearDataMethod = playerDataType.GetMethod("GetGearData", new Type[] { typeof(IUpgradable) });
+                        var gearData = getGearDataMethod?.Invoke(playerDataInstance, new object[] { upgradable });
+
+                        if (gearData != null)
+                        {
+                            var gear = gearData.GetType().GetField("gear", BindingFlags.NonPublic | BindingFlags.Instance)?.GetValue(gearData) as IUpgradable;
+                            if (gear != null)
+                            {
+                                string key = $"{gear.Info.ID}_{realIndex}";
+                                displayName = PlayerPrefs.GetString("LoadoutName_" + key, "");
+                            }
+                        }
                     }
 
                     if (!string.IsNullOrEmpty(displayName))
                     {
-                        title = displayName + " [L to rename]";
+                        title = displayName;
                     }
                     else
                     {
-                        title = string.Format("Loadout {0} [L to rename]", realIndex + 1);
+                        title = string.Format("Loadout {0}", realIndex + 1);
                     }
                 }
             }
