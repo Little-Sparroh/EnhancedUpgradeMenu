@@ -22,7 +22,6 @@ public static class LoadoutExpanderMod
         if (PageOffset > 6) PageOffset = 0;
 
         int pageNum = (PageOffset / 3) + 1;
-        LoggerSource.LogInfo($"Switched to Loadout Page {pageNum}");
 
         RefreshCurrentWindow();
     }
@@ -148,7 +147,7 @@ public static class LoadoutExpanderMod
                     int realIndex = visualIndex + LoadoutExpanderMod.PageOffset;
 
                     string displayName = null;
-                    IUpgradable upgradable = LoadoutExpanderMod._upgradableField.GetValue(window) as IUpgradable;
+                    IUpgradable upgradable = window.GetType().GetField("upgradable", BindingFlags.NonPublic | BindingFlags.Instance)?.GetValue(window) as IUpgradable;
 
                     if (upgradable != null)
                     {

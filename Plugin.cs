@@ -4,11 +4,7 @@ using BepInEx.Configuration;
 using HarmonyLib;
 using UnityEngine;
 using UnityEngine.InputSystem;
-using UnityEngine.UI;
-using System;
-using System.Reflection;
-using System.Linq;
-using Pigeon;
+using System.Collections.Generic;
 
 [BepInPlugin(PluginGUID, PluginName, PluginVersion)]
 [MycoMod(null, ModFlags.IsClientSide)]
@@ -16,51 +12,65 @@ public class SparrohPlugin : BaseUnityPlugin
 {
     public const string PluginGUID = "sparroh.enhancedupgrademenu";
     public const string PluginName = "EnhancedUpgradeMenu";
-    public const string PluginVersion = "1.0.0";
+    public const string PluginVersion = "1.1.0";
 
     private ConfigEntry<Key> TrashMarkKey;
     private ConfigEntry<Key> ScrollerToggleKey;
     private ConfigEntry<Key> CompareKey;
+    private ConfigEntry<bool> EnableInstantScrapping;
+    private ConfigEntry<bool> EnableFixedTimer;
+    private ConfigEntry<float> FixedTimerDuration;
+    private ConfigEntry<bool> EnableStatReformat;
+    private static ManualLogSource staticLogger;
 
     private void Awake()
     {
         var harmony = new Harmony(PluginGUID);
 
-        LoadoutHandlingMod.Logger = Logger;
-        ScrapHandlingMod.Logger = Logger;
-        CompareHandlingMod.Logger = Logger;
-        SortHandlingMod.Logger = Logger;
         LoadoutExpanderMod.LoggerSource = Logger;
 
-// Temporarily disabled - comparison mode broken
-        //CompareHandlingMod.Init();
-
         LoadoutExpanderMod._loadoutButtonsField = AccessTools.Field(typeof(GearDetailsWindow), "loadoutButtons");
-        LoadoutExpanderMod._upgradableField = AccessTools.Field(typeof(GearDetailsWindow), "upgradable");
         LoadoutExpanderMod._updateIconMethod = AccessTools.Method(typeof(GearDetailsWindow), "UpdateLoadoutIcon");
 
-        TrashMarkKey = Config.Bind("Keybinds", "TrashMarkKey", Key.T, "Key to toggle trash mark on upgrades");
+        TrashMarkKey = Config.Bind("Keybinds", "Mark for Trash", Key.T, "Key to toggle trash mark on upgrades");
         ScrapHandlingMod.currentTrashKey = TrashMarkKey.Value;
         TrashMarkKey.SettingChanged += (sender, args) => { ScrapHandlingMod.currentTrashKey = TrashMarkKey.Value; };
         ScrapHandlingMod.ScrapMarkedAction = () => ScrapHandlingMod.TryScrapMarkedUpgrades(this);
         ScrapHandlingMod.ScrapNonFavoriteAction = () => ScrapHandlingMod.TryScrapNonFavoriteUpgrades(this);
 
-        ScrollerToggleKey = Config.Bind("Keybinds", "PageToggleKey", Key.Period, "Key to toggle between loadout pages");
+        ScrollerToggleKey = Config.Bind("Keybinds", "Change Loadout Page", Key.Period, "Key to toggle loadout pages");
         LoadoutExpanderMod.ToggleHotkey = ScrollerToggleKey.Value;
         ScrollerToggleKey.SettingChanged += (sender, args) => { LoadoutExpanderMod.ToggleHotkey = ScrollerToggleKey.Value; };
 
-// Temporarily disabled - comparison mode broken
-        //CompareKey = Config.Bind("Keybinds", "CompareKey", Key.C, "Key to toggle compare mode for upgrades");
-        //CompareHandlingMod.CompareKey = (UnityEngine.InputSystem.Key)CompareKey.Value;
-        //CompareKey.SettingChanged += (sender, args) => { CompareHandlingMod.CompareKey = (UnityEngine.InputSystem.Key)CompareKey.Value; };
+        CompareKey = Config.Bind("Keybinds", "Toggle Compare", Key.C, "Key to compare upgrades");
+        CompareHandling.CompareKey = CompareKey;
+        CompareKey.SettingChanged += (sender, args) => { CompareHandling.CompareKey = CompareKey; };
+
+        EnableInstantScrapping = Config.Bind("General", "Instant Scrap", false, "Enable instant scrapping without timer");
+        EnableFixedTimer = Config.Bind("General", "Fixed Scrap Time", false, "Use fixed scrap timer instead of default");
+        FixedTimerDuration = Config.Bind("General", "Scrap Duration", 1f, "Duration in seconds for fixed scrap timer");
+
+        EnableStatReformat = Config.Bind("General", "Reformat Statistics", true, "Force Key: Value stat format");
+        FormatHandling.enableStatReformat = EnableStatReformat.Value;
+        EnableStatReformat.SettingChanged += (sender, args) => { FormatHandling.enableStatReformat = EnableStatReformat.Value; };
+
+        staticLogger = Logger;
+        CompareHandling.Logger = Logger;
+        FormatHandling.Logger = Logger;
+
+        CompareHandling.Initialize(Logger);
+        InstantScrapping.Initialize(EnableFixedTimer, FixedTimerDuration, EnableInstantScrapping);
+        FormatHandling.Initialize(Logger);
+
+        CompareHandling.ApplyPatches(harmony);
+
+        priorityCurrentOrder = PriorityPatches.LoadPriorityOrder();
+
+
 
         harmony.PatchAll();
 
-        var setupMethod = AccessTools.Method(typeof(GearDetailsWindow), "Setup", new[] { typeof(IUpgradable) });
-        if (setupMethod != null)
-        {
-            harmony.Patch(setupMethod, postfix: new HarmonyMethod(typeof(Patches), "SetupPostfix"));
-        }
+        PriorityPatches.Patch(harmony);
 
         var updateMethod = AccessTools.Method(typeof(GearDetailsWindow), "Update");
         if (updateMethod != null)
@@ -86,13 +96,12 @@ public class SparrohPlugin : BaseUnityPlugin
             harmony.Patch(enableGridViewMethod, postfix: new HarmonyMethod(typeof(Patches), "EnableGridViewPostfix"));
         }
 
-        var gameManagerUpdateMethod = AccessTools.Method(typeof(GameManager), "Update");
-        if (gameManagerUpdateMethod != null)
-        {
-            harmony.Patch(gameManagerUpdateMethod, postfix: new HarmonyMethod(typeof(CompareHandlingMod), "GameManagerUpdatePostfix"));
-        }
 
-        Logger.LogInfo($"{PluginName} loaded successfully.");
+    }
+
+    private void OnDestroy()
+    {
+        InstantScrapping.Destroy();
     }
 
     private void Update()
@@ -107,14 +116,24 @@ public class SparrohPlugin : BaseUnityPlugin
 
     private void OnGUI()
     {
+
         if (showPopup)
         {
             Rect popupRect = new Rect(Screen.width / 2 - 150, Screen.height / 2 - 50, 300, 100);
             GUI.Window(0, popupRect, DrawPopup, "Confirm Action");
         }
-        else if (Menu.Instance != null && Menu.Instance.IsOpen && Menu.Instance.WindowSystem.GetTop() is GearDetailsWindow)
+        else if (Menu.Instance != null && Menu.Instance.IsOpen)
         {
-            DrawButtons();
+            var topWindow = Menu.Instance.WindowSystem.GetTop() as GearDetailsWindow;
+            if (topWindow != null)
+            {
+                DrawButtons();
+            }
+        }
+
+        if (showPriorityWindow)
+        {
+            priorityWindowRect = GUI.Window(0, priorityWindowRect, DrawPriorityWindow, "Sort Priority");
         }
     }
 
@@ -125,6 +144,20 @@ public class SparrohPlugin : BaseUnityPlugin
         float buttonWidth = 150f;
         float buttonHeight = 50f;
         float spacing = 10f;
+
+        float priorityX = buttonX - 160;
+        if (GUI.Button(new Rect(priorityX, buttonY, 150, 50), "Priority Sort"))
+        {
+            showPriorityWindow = !showPriorityWindow;
+            if (showPriorityWindow)
+            {
+                priorityWindowRect = new Rect((Screen.width - 300) / 2, (Screen.height - 600) / 2, 300, 600);
+            }
+            else
+            {
+                priorityCurrentOrder = PriorityPatches.LoadPriorityOrder();
+            }
+        }
 
         Rect filterRect = new Rect(buttonX, buttonY, buttonWidth, buttonHeight);
         if (GUI.Button(filterRect, "Filter"))
@@ -154,6 +187,112 @@ public class SparrohPlugin : BaseUnityPlugin
         }
     }
 
+    private static void DrawPriorityWindow(int id)
+    {
+        GUI.DragWindow(new Rect(0, 0, 300, 20));
+
+        Event e = Event.current;
+
+        for (int i = 0; i < priorityCurrentOrder.Count; i++)
+        {
+            if (i == priorityDraggedIndex) continue;
+
+            Rect itemRect = new Rect(10, 30 + i * 25, 270, 20);
+            GUI.Label(itemRect, (i + 1) + ". " + GetPriorityCriteriaName(priorityCurrentOrder[i]));
+
+            if (e.type == EventType.MouseDown && itemRect.Contains(e.mousePosition))
+            {
+                priorityDraggedIndex = i;
+                priorityDragOffsetY = e.mousePosition.y - itemRect.y;
+                e.Use();
+            }
+        }
+
+        if (priorityDraggedIndex != -1)
+        {
+            if (e.type == EventType.MouseDrag)
+            {
+                float newY = e.mousePosition.y - priorityDragOffsetY;
+                int newIndex = Mathf.Clamp(Mathf.RoundToInt((newY - 30) / 25), 0, priorityCurrentOrder.Count - 1);
+                if (newIndex != priorityDraggedIndex)
+                {
+                    var item = priorityCurrentOrder[priorityDraggedIndex];
+                    priorityCurrentOrder.RemoveAt(priorityDraggedIndex);
+                    priorityCurrentOrder.Insert(newIndex, item);
+                    priorityDraggedIndex = newIndex;
+                }
+                e.Use();
+            }
+            else if (e.type == EventType.MouseUp)
+            {
+                priorityDraggedIndex = -1;
+                e.Use();
+            }
+        }
+
+        if (priorityDraggedIndex != -1)
+        {
+            float drawY = e.mousePosition.y - priorityDragOffsetY;
+            Rect draggedRect = new Rect(10, drawY, 270, 20);
+            GUI.skin.label.fontStyle = FontStyle.Bold;
+            GUI.Label(draggedRect, "x. " + GetPriorityCriteriaName(priorityCurrentOrder[priorityDraggedIndex]));
+            GUI.skin.label.fontStyle = FontStyle.Normal;
+        }
+
+        if (GUI.Button(new Rect(10, 520, 70, 30), "Save"))
+        {
+            PriorityPatches.SavePriorityOrder(priorityCurrentOrder);
+            PriorityPatches.TriggerPrioritySort();
+            showPriorityWindow = false;
+
+        }
+
+        if (GUI.Button(new Rect(90, 520, 70, 30), "Cancel"))
+        {
+            showPriorityWindow = false;
+            priorityCurrentOrder = PriorityPatches.LoadPriorityOrder();
+
+        }
+
+        if (GUI.Button(new Rect(170, 520, 70, 30), "Reset"))
+        {
+            priorityCurrentOrder = new List<PriorityCriteria>
+            {
+                PriorityCriteria.Favorited, PriorityCriteria.NotFavorited, PriorityCriteria.Unlocked,
+                PriorityCriteria.Locked, PriorityCriteria.RecentlyUsed, PriorityCriteria.RecentlyAcquired,
+                PriorityCriteria.InstanceName, PriorityCriteria.Oddity, PriorityCriteria.Exotic,
+                PriorityCriteria.Epic, PriorityCriteria.Rare, PriorityCriteria.Standard,
+                PriorityCriteria.Turbocharged, PriorityCriteria.Trashed, PriorityCriteria.NotTurbocharged,
+                PriorityCriteria.NotTrashed
+            };
+
+        }
+    }
+
+    private static string GetPriorityCriteriaName(PriorityCriteria criteria)
+    {
+        return criteria switch
+        {
+            PriorityCriteria.Favorited => "Favorited",
+            PriorityCriteria.NotFavorited => "Not Favorited",
+            PriorityCriteria.Unlocked => "Unlocked",
+            PriorityCriteria.Locked => "Locked",
+            PriorityCriteria.RecentlyUsed => "Recently Used",
+            PriorityCriteria.RecentlyAcquired => "Recently Acquired",
+            PriorityCriteria.InstanceName => "Upgrade Instance Name",
+            PriorityCriteria.Oddity => "Oddity",
+            PriorityCriteria.Exotic => "Exotic",
+            PriorityCriteria.Epic => "Epic",
+            PriorityCriteria.Rare => "Rare",
+            PriorityCriteria.Standard => "Standard",
+            PriorityCriteria.Turbocharged => "Turbocharged",
+            PriorityCriteria.Trashed => "Trashed",
+            PriorityCriteria.NotTurbocharged => "Not Turbocharged",
+            PriorityCriteria.NotTrashed => "Not Trashed",
+            _ => "Unknown"
+        };
+    }
+
     private static void DrawPopup(int windowID)
     {
         GUI.Label(new Rect(10, 20, 280, 40), popupMessage);
@@ -178,4 +317,9 @@ public class SparrohPlugin : BaseUnityPlugin
     private static bool showPopup = false;
     private static string popupAction = "";
     private static string popupMessage = "";
+    private static bool showPriorityWindow = false;
+    private static Rect priorityWindowRect = new Rect(0, 0, 300, 600);
+    private static List<PriorityCriteria> priorityCurrentOrder;
+    private static int priorityDraggedIndex = -1;
+    private static float priorityDragOffsetY;
 }

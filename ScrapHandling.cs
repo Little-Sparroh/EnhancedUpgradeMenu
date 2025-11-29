@@ -6,16 +6,9 @@ using UnityEngine;
 using UnityEngine.InputSystem;
 using UnityEngine.UI;
 using UnityEngine.EventSystems;
-using System.Reflection;
-using System;
-using System.IO;
-using BepInEx.Configuration;
-using BepInEx.Logging;
-using Pigeon;
 
 public static class ScrapHandlingMod
 {
-    internal static ManualLogSource Logger;
 
     private static bool isScrapping = false;
     public static bool IsScrapping => isScrapping;
@@ -142,8 +135,11 @@ public static Key currentTrashKey;
             PlayerData.Instance.AddResource(kvp.Key, kvp.Value);
         }
 
-        wasScrappingSkins = isSkinsMode;
-        RefreshOpenWindows();
+        if (scrappedCount > 0)
+        {
+            wasScrappingSkins = isSkinsMode;
+            RefreshOpenWindows();
+        }
         isScrapping = false;
     }
 
@@ -219,10 +215,6 @@ public static void TryScrapMarkedUpgrades(MonoBehaviour owner)
         if (hasMarked)
         {
             owner.StartCoroutine(ScrapMarkedUpgrades());
-        }
-        else
-        {
-            GameManager.Instance.ShowInfo("No upgrades marked for scrapping.", null, null, null, Color.white, Rarity.None, playSounds: false);
         }
     }
 
@@ -338,8 +330,11 @@ public static void TryScrapMarkedUpgrades(MonoBehaviour owner)
             PlayerData.Instance.AddResource(kvp.Key, kvp.Value);
         }
 
-        wasScrappingSkins = isSkinsMode;
-        RefreshOpenWindows();
+        if (scrappedCount > 0)
+        {
+            wasScrappingSkins = isSkinsMode;
+            RefreshOpenWindows();
+        }
         isScrapping = false;
     }
 
@@ -365,10 +360,6 @@ public static void TryScrapMarkedUpgrades(MonoBehaviour owner)
         if (hasNonFavorite)
         {
             owner.StartCoroutine(ScrapNonFavoriteUpgrades());
-        }
-        else
-        {
-            GameManager.Instance.ShowInfo("No non-favorite upgrades to scrap.", null, null, null, Color.white, Rarity.None, playSounds: false);
         }
     }
 
@@ -397,10 +388,6 @@ public static void TryScrapMarkedUpgrades(MonoBehaviour owner)
 
 public class Patches
 {
-    public static void SetupPostfix(GearDetailsWindow __instance, IUpgradable upgradable)
-    {
-
-    }
 
     private static void AddScrapButton(GearDetailsWindow window)
     {

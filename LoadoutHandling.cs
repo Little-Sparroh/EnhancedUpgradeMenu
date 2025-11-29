@@ -1,14 +1,7 @@
 ﻿using HarmonyLib;
 using System;
-using System.Collections.Generic;
 using System.Reflection;
 using UnityEngine;
-using BepInEx.Logging;
-
-public static class LoadoutHandlingMod
-{
-    internal static ManualLogSource Logger;
-}
 
 [HarmonyPatch]
 public static class PlayerDataPatches
