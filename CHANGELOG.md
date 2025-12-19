@@ -1,5 +1,15 @@
 # Changelog
 
+## 1.2.0 (2025-12-18)
+
+### Major Features
+* **Gun Data Display**: Added comprehensive weapon stats preview window showing damage, fire rate, ammo capacity, recoil, spread, bullet data, and more when viewing gear details
+* **Grid Clear Function**: Added "Clear Grid" button to instantly remove all upgrades from the gear grid with a single click
+* **Loadout Previewing**: Added preview functionality that displays loadout contents when hovering over loadout buttons, supporting both text and visual preview modes
+
+### Technical Updates
+* **Clipboard API Improvement**: Replaced Windows API clipboard functions with Unity's built-in `GUIUtility.systemCopyBuffer` to remove kernel32.dll dependency and improve cross-platform compatibility
+
 ## 1.1.1 (2025-11-29)
 
 ### Loadout System Enhancements

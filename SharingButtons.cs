@@ -9,8 +9,6 @@ public class SharingButtons : MonoBehaviour
     public GearDetailsWindow window;
     private ModuleEquipSlots equipSlots;
 
-    // Using Unity's built-in clipboard API - no P/Invoke needed
-
     private static string Clipboard_GetText()
     {
         return GUIUtility.systemCopyBuffer;
@@ -82,7 +80,7 @@ public class SharingButtons : MonoBehaviour
             var upgrade = kvp.Key;
             var positions = kvp.Value;
             byte rotation = upgrade.GetRotation(window.UpgradablePrefab);
-            int id = upgrade.Upgrade.ID;
+            int id = upgrade.Upgrade.ID.ID;
             int minX = int.MaxValue, minY = int.MaxValue;
             float sumX = 0, sumY = 0;
             foreach (var pos in positions)
@@ -153,7 +151,7 @@ public class SharingButtons : MonoBehaviour
         var enumerator = new PlayerData.UpgradeEnumerator(upgradable);
         while (enumerator.MoveNext())
         {
-            var id = enumerator.Upgrade.Upgrade.ID;
+            var id = enumerator.Upgrade.Upgrade.ID.ID;
             if (!dict.ContainsKey(id)) dict[id] = new List<UpgradeInstance>();
             dict[id].Add(enumerator.Upgrade);
         }
@@ -161,7 +159,7 @@ public class SharingButtons : MonoBehaviour
         enumerator = new PlayerData.UpgradeEnumerator(Global.Instance);
         while (enumerator.MoveNext())
         {
-            var id = enumerator.Upgrade.Upgrade.ID;
+            var id = enumerator.Upgrade.Upgrade.ID.ID;
             if (!dict.ContainsKey(id)) dict[id] = new List<UpgradeInstance>();
             dict[id].Add(enumerator.Upgrade);
         }
@@ -175,7 +173,7 @@ public class SharingButtons : MonoBehaviour
         PlayerData.UpgradeEnumerator enumerator = new PlayerData.UpgradeEnumerator(upgradable);
         while (enumerator.MoveNext())
         {
-            if (enumerator.Upgrade.Upgrade.ID == id)
+            if (enumerator.Upgrade.Upgrade.ID.ID == id)
             {
                 return enumerator.Upgrade;
             }
@@ -185,7 +183,7 @@ public class SharingButtons : MonoBehaviour
             enumerator = new PlayerData.UpgradeEnumerator(Global.Instance);
             while (enumerator.MoveNext())
             {
-                if (enumerator.Upgrade.Upgrade.ID == id)
+                if (enumerator.Upgrade.Upgrade.ID.ID == id)
                 {
                     return enumerator.Upgrade;
                 }

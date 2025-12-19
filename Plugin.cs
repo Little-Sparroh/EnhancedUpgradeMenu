@@ -12,7 +12,7 @@ public class SparrohPlugin : BaseUnityPlugin
 {
     public const string PluginGUID = "sparroh.enhancedupgrademenu";
     public const string PluginName = "EnhancedUpgradeMenu";
-    public const string PluginVersion = "1.1.3";
+    public const string PluginVersion = "1.2.0";
 
     private ConfigEntry<Key> TrashMarkKey;
     private ConfigEntry<Key> ScrollLeftKey;
@@ -23,6 +23,8 @@ public class SparrohPlugin : BaseUnityPlugin
     private ConfigEntry<bool> EnableFixedTimer;
     private ConfigEntry<float> FixedTimerDuration;
     private ConfigEntry<bool> EnableStatReformat;
+    private ConfigEntry<bool> EnableDisplayGunData;
+    private DisplayGunDataMod displayGunDataMod;
     private static ManualLogSource staticLogger;
 
     private void Awake()
@@ -64,6 +66,16 @@ public class SparrohPlugin : BaseUnityPlugin
         FormatHandling.enableStatReformat = EnableStatReformat.Value;
         EnableStatReformat.SettingChanged += (sender, args) => { FormatHandling.enableStatReformat = EnableStatReformat.Value; };
 
+        EnableDisplayGunData = Config.Bind("General", "Display Gun Stats", false, "Show gun stats window when editing weapons in Gear Details");
+        EnableDisplayGunData.SettingChanged += (sender, args) => { if (displayGunDataMod != null) displayGunDataMod.SetEnable(EnableDisplayGunData.Value); };
+
+        LoadoutPreviewMod.enableTextMode = Config.Bind("General", "Loadout Preview", false, "If true, show upgrade list on hover");
+        // LoadoutPreviewMod.enableVisualMode = Config.Bind("LoadoutPreview.General", "Enable Visual Mode", false, "If true, show hexgrid preview on hover (fallback if text disabled)");
+        LoadoutPreviewMod.enableTextMode.SettingChanged += (sender, args) => LoadoutPreviewMod.OnConfigChanged();
+        // LoadoutPreviewMod.enableVisualMode.SettingChanged += (sender, args) => LoadoutPreviewMod.OnConfigChanged();
+        LoadoutPreviewMod.Logger = Logger;
+        LoadoutPreviewMod.UpdatePreviewMode();
+
         staticLogger = Logger;
         CompareHandling.Logger = Logger;
         FormatHandling.Logger = Logger;
@@ -72,7 +84,12 @@ public class SparrohPlugin : BaseUnityPlugin
         InstantScrapping.Initialize(EnableFixedTimer, FixedTimerDuration, EnableInstantScrapping);
         FormatHandling.Initialize(Logger);
 
+        GridClearMod.Initialize(Logger);
+        displayGunDataMod = new DisplayGunDataMod(Logger, EnableDisplayGunData.Value);
+
         CompareHandling.ApplyPatches(harmony);
+
+        LoadoutPreviewMod.ApplyPatches(harmony);
 
         priorityCurrentOrder = PriorityPatches.LoadPriorityOrder();
 
@@ -112,6 +129,7 @@ public class SparrohPlugin : BaseUnityPlugin
     private void OnDestroy()
     {
         InstantScrapping.Destroy();
+        LoadoutPreviewMod.Destroy();
     }
 
     private void Update()
@@ -127,6 +145,9 @@ public class SparrohPlugin : BaseUnityPlugin
                 LoadoutExpanderMod.ScrollLeft();
             }
         }
+
+        displayGunDataMod.SetEnable(EnableDisplayGunData.Value);
+        displayGunDataMod.Update();
     }
 
     private void OnGUI()
@@ -150,6 +171,9 @@ public class SparrohPlugin : BaseUnityPlugin
         {
             priorityWindowRect = GUI.Window(0, priorityWindowRect, DrawPriorityWindow, "Sort Priority");
         }
+
+        GridClearMod.DrawClearButton();
+        displayGunDataMod.OnGUI();
     }
 
     private static void DrawButtons()

@@ -49,6 +49,9 @@ Enhanced Upgrade Menu transforms the gear upgrade interface with a suite of adva
 - Loadout expansion/pagination (press **.** to cycle pages)
 - Stat display reformatting: "50 Damage" → "Damage: **50**"
 - Clean, intuitive interface with color-coded buttons
+- **Gun Data Display**: Comprehensive weapon stats preview window showing damage, fire rate, ammo capacity, recoil, spread, and bullet data
+- **Grid Clear Function**: "Clear Grid" button to instantly remove all upgrades from the gear grid
+- **Loadout Previewing**: Preview loadout contents when hovering over loadout buttons (text and visual modes)
 
 **Configuration Options**
 - Hotkey customization (trash marking, comparison, page toggle)
@@ -128,9 +131,12 @@ Enhanced Upgrade Menu transforms the gear upgrade interface with a suite of adva
 We welcome contributions! This mod is developed for the MycoPunk community by players who want to enhance their upgrade management experience.
 
 ## Authors
-- **Sparroh** - Main developer and maintainer
-- **Coloron** - Original LoadoutScrolling extension integration
-- **funlennysub** - Initial BepInEx template
+* Sparroh
+* funlennysub (original mod template)
+* [@DomPizzie](https://twitter.com/dompizzie) (README template)
+* Coloron - Original LoadoutScrolling extension
+* funlennysub (original grid encoding)
+* Generally Break (coaching for efficient grid encoding)
 
 ## License
 This project is licensed under the MIT License - see the LICENSE.md file for details

@@ -291,9 +291,7 @@ public static class GearDetailsWindowPatches
     [HarmonyPostfix]
     public static void SetupPostfix(ref GearDetailsWindow __instance, IUpgradable upgradable)
     {
-        // Reset loadout page offset when opening a new gear menu
         LoadoutExpanderMod.PageOffset = 0;
-        // Refresh the icons to display the correct loadouts for the new page
         LoadoutExpanderMod.RefreshCurrentWindow();
 
         try
@@ -396,7 +394,6 @@ public static class GearDetailsWindowPatches
                         LoadoutHoverInfoPatches.windowLoadoutNames[__instance] = windowNamesDict;
                     }
 
-                    // Only load explicitly named loadouts, let GetLoadoutName handle defaults dynamically
                     for (int i = 0; i < NEW_LOADOUT_COUNT; i++)
                     {
                         string key = $"{gear.Info.ID}_{i}";
@@ -405,7 +402,6 @@ public static class GearDetailsWindowPatches
                         {
                             windowNamesDict[i] = savedName;
                         }
-                        // Don't populate defaults on load - they should be generated dynamically
                     }
                 }
             }
@@ -1012,7 +1008,6 @@ public static void GearDetailsWindowUpdatePostfix(ref GearDetailsWindow __instan
                         return;
                     }
                 }
-                // Only rename when hovering over a loadout slot - no fallback to first slot
             }
 
         }

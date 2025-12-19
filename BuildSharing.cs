@@ -31,7 +31,7 @@ public class EquippedUpgrades
         var bytes = Convert.FromBase64String(code);
         using var ms = new MemoryStream(bytes);
         using var br = new BinaryReader(ms);
-        GearID = 0; // Not stored in code
+        GearID = 0;
         Upgrades = new List<EquippedUpgrade>();
         while (ms.Position < ms.Length)
         {
