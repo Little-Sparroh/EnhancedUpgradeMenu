@@ -8,7 +8,7 @@ using BepInEx;
 
 public class CompareHoverManager : MonoBehaviour
 {
-    private static ManualLogSource Logger => CompareHandling.Logger;
+    private static ManualLogSource Logger => SparrohPlugin.Logger;
 
     public static CompareHoverManager Instance { get; private set; }
 

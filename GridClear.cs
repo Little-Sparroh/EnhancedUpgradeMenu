@@ -1,15 +1,13 @@
 ﻿using BepInEx.Logging;
+using System.Collections.Generic;
+using System.Linq;
 using System.Reflection;
 using UnityEngine;
 
 public static class GridClearMod
 {
-    internal static ManualLogSource Logger;
-
-    public static void Initialize(ManualLogSource logger)
+    public static void Initialize()
     {
-        Logger = logger;
-        Logger.LogInfo("GridClear integrated successfully.");
     }
 
     public static void DrawClearButton()
@@ -36,6 +34,7 @@ public static class GridClearMod
         var equipSlots = GetEquipSlots(window);
         if (equipSlots == null) return;
         var hexMap = equipSlots.HexMap;
+        var upgradesToClear = new List<UpgradeInstance>();
         for (int i = 0; i < hexMap.Height; i++)
         {
             for (int j = 0; j < hexMap.Width; j++)
@@ -43,9 +42,14 @@ public static class GridClearMod
                 var node = hexMap[j, i];
                 if (node.upgrade != null)
                 {
-                    equipSlots.Unequip(window.UpgradablePrefab, node.upgrade);
+                    upgradesToClear.Add(node.upgrade);
                 }
             }
+        }
+        var sortedUpgrades = upgradesToClear.OrderBy(u => u.Upgrade.Name == "Boundary Incursion" ? 1 : 0).ToList();
+        foreach (var upgrade in sortedUpgrades)
+        {
+            equipSlots.Unequip(window.UpgradablePrefab, upgrade);
         }
     }
 

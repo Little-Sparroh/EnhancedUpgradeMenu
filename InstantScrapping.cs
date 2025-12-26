@@ -1,4 +1,5 @@
-﻿using BepInEx.Configuration;
+﻿using System;
+using BepInEx.Configuration;
 using HarmonyLib;
 using System.IO;
 
@@ -17,27 +18,52 @@ public static class InstantScrapping
 
     public static void Initialize(ConfigEntry<bool> enableFixed, ConfigEntry<float> fixedDur, ConfigEntry<bool> enableInst)
     {
-        EnableFixedTimer = enableFixed;
-        FixedTimerDuration = fixedDur;
-        EnableInstantScrapping = enableInst;
-
-        s_EnableInstantScrapping = EnableInstantScrapping.Value;
-        s_EnableFixedTimer = EnableFixedTimer.Value;
-        s_FixedTimerDuration = FixedTimerDuration.Value;
-
-        SetupFileWatchers();
-
-        _harmony = new Harmony("sparroh.instantscrapping");
-
-        var unlockActionParamsType = AccessTools.TypeByName("UnlockActionParams") ?? AccessTools.TypeByName("Pigeon.UnlockActionParams");
-        if (unlockActionParamsType == null)
+        try
         {
-            return;
+            EnableFixedTimer = enableFixed;
+            FixedTimerDuration = fixedDur;
+            EnableInstantScrapping = enableInst;
+
+            s_EnableInstantScrapping = EnableInstantScrapping.Value;
+            s_EnableFixedTimer = EnableFixedTimer.Value;
+            s_FixedTimerDuration = FixedTimerDuration.Value;
+
+            try
+            {
+                SetupFileWatchers();
+            }
+            catch (Exception ex)
+            {
+                SparrohPlugin.Logger.LogError($"Failed to setup file watchers: {ex.Message}");
+            }
+
+            _harmony = new Harmony("sparroh.instantscrapping");
+
+            var unlockActionParamsType = AccessTools.TypeByName("UnlockActionParams") ?? AccessTools.TypeByName("Pigeon.UnlockActionParams");
+            if (unlockActionParamsType == null)
+            {
+                return;
+            }
+
+            var hasUnlockActionMethod = AccessTools.Method(typeof(GearUpgradeUI), "HasUnlockAction", new[] { unlockActionParamsType.MakeByRefType() });
+            if (hasUnlockActionMethod != null)
+            {
+                try
+                {
+                    _harmony.Patch(hasUnlockActionMethod, postfix: new HarmonyMethod(typeof(InstantScrapPatches), "HasUnlockActionPostfix"));
+                }
+                catch (Exception ex)
+                {
+                    SparrohPlugin.Logger.LogError($"Failed to apply InstantScrapping patches: {ex.Message}");
+                }
+            }
+            else
+            {
+            }
         }
-        var hasUnlockActionMethod = AccessTools.Method(typeof(GearUpgradeUI), "HasUnlockAction", new[] { unlockActionParamsType.MakeByRefType() });
-        if (hasUnlockActionMethod != null)
+        catch (Exception ex)
         {
-            _harmony.Patch(hasUnlockActionMethod, postfix: new HarmonyMethod(typeof(InstantScrapPatches), "HasUnlockActionPostfix"));
+            SparrohPlugin.Logger.LogError($"Critical error during InstantScrapping initialization: {ex.Message}");
         }
     }
 
@@ -69,44 +95,51 @@ public static class InstantScrapPatches
 {
     public static void HasUnlockActionPostfix(ref object data)
     {
-        if (data == null)
+        try
         {
-            return;
-        }
+            if (data == null)
+            {
+                return;
+            }
 
-        var onSecondaryCompleteField = data.GetType().GetField("OnSecondaryComplete");
-        if (onSecondaryCompleteField == null)
-        {
-            return;
-        }
+            var onSecondaryCompleteField = data.GetType().GetField("OnSecondaryComplete");
+            if (onSecondaryCompleteField == null)
+            {
+                return;
+            }
 
-        var onSecondary = onSecondaryCompleteField.GetValue(data);
-        if (onSecondary == null)
-        {
-            return;
-        }
+            var onSecondary = onSecondaryCompleteField.GetValue(data);
+            if (onSecondary == null)
+            {
+                return;
+            }
 
-        var durationField = data.GetType().GetField("SecondaryDuration");
-        if (durationField == null)
-        {
-            return;
-        }
+            var durationField = data.GetType().GetField("SecondaryDuration");
+            if (durationField == null)
+            {
+                return;
+            }
 
-        float currentDuration = (float)durationField.GetValue(data);
+            float currentDuration = (float)durationField.GetValue(data);
 
-        if (InstantScrapping.EnableInstantScrapping.Value)
-        {
-            durationField.SetValue(data, 0.001f);
-        }
-        else if (InstantScrapping.EnableFixedTimer.Value)
-        {
-            durationField.SetValue(data, InstantScrapping.FixedTimerDuration.Value);
-        }
-        else
-        {
-            return;
-        }
+            if (InstantScrapping.EnableInstantScrapping.Value)
+            {
+                durationField.SetValue(data, 0.001f);
+            }
+            else if (InstantScrapping.EnableFixedTimer.Value)
+            {
+                durationField.SetValue(data, InstantScrapping.FixedTimerDuration.Value);
+            }
+            else
+            {
+                return;
+            }
 
-        float newDuration = (float)durationField.GetValue(data);
+            float newDuration = (float)durationField.GetValue(data);
+        }
+        catch (Exception ex)
+        {
+            SparrohPlugin.Logger.LogError($"Error in HasUnlockActionPostfix: {ex.Message}");
+        }
     }
 }

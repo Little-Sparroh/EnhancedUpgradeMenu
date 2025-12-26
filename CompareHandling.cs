@@ -1,22 +1,33 @@
-﻿using BepInEx.Logging;
+﻿using System;
+using BepInEx.Logging;
 using BepInEx.Configuration;
 using HarmonyLib;
 using UnityEngine.InputSystem;
 
 public static class CompareHandling
 {
-    internal static ManualLogSource Logger;
     public static ConfigEntry<Key> CompareKey;
 
-    public static void Initialize(ManualLogSource logger)
+    public static void Initialize()
     {
-        Logger = logger;
-
-        Logger.LogInfo("CompareHoverPatches and manager initialized successfully.");
+        try
+        {
+        }
+        catch (Exception ex)
+        {
+            SparrohPlugin.Logger.LogError($"Failed to initialize CompareHandling: {ex.Message}");
+        }
     }
 
     public static void ApplyPatches(Harmony harmony)
     {
-        CompareHoverPatches.ApplyPatches(harmony);
+        try
+        {
+            CompareHoverPatches.ApplyPatches(harmony);
+        }
+        catch (Exception ex)
+        {
+            SparrohPlugin.Logger.LogError($"Failed to apply CompareHandling patches: {ex.Message}");
+        }
     }
 }

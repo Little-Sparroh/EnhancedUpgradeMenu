@@ -1,6 +1,5 @@
 using System;
 using System.Collections.Generic;
-using System.Linq;
 using UnityEngine;
 using UnityEngine.UI;
 using HarmonyLib;
@@ -131,7 +130,7 @@ public class EquipSlotsPreview : MonoBehaviour
                 }
                 catch (Exception ex)
                 {
-                    Debug.LogError($"EquipSlotsPreview.Setup: Failed to equip upgrade: {ex.Message}");
+                    SparrohPlugin.Logger.LogError($"EquipSlotsPreview.Setup: Failed to equip upgrade: {ex.Message}");
                 }
             }
         }

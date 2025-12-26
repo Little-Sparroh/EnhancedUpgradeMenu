@@ -12,7 +12,6 @@ public static class PriorityPatches
         priorityOrder = LoadPriorityOrder();
     }
 
-    internal static ManualLogSource Logger;
     private static List<PriorityCriteria> priorityOrder;
     private static bool performingPrioritySort;
     public static GearDetailsWindow currentWindow;
@@ -42,18 +41,35 @@ public static class PriorityPatches
 
     public static bool SortUpgrades_Prefix(GearDetailsWindow __instance, int i)
     {
-        if (performingPrioritySort)
+        try
         {
-            priorityOrder = LoadPriorityOrder();
-            performingPrioritySort = false;
-            usedCriteria.Clear();
-            List<GearUpgradeUI> upgradeUIs = Traverse.Create(__instance).Field<List<GearUpgradeUI>>("upgradeUIs").Value;
-            upgradeUIs.Sort(GetPriorityComparison(priorityOrder));
-            Traverse.Create(__instance).Method("UpdateUpgradeOrder").GetValue();
-            Traverse.Create(__instance).Method("SetUpgradeListScroll", 1f).GetValue();
-            return false;
+            if (performingPrioritySort)
+            {
+                try
+                {
+                    priorityOrder = LoadPriorityOrder();
+                    performingPrioritySort = false;
+                    usedCriteria.Clear();
+                    List<GearUpgradeUI> upgradeUIs = Traverse.Create(__instance).Field<List<GearUpgradeUI>>("upgradeUIs").Value;
+                    upgradeUIs.Sort(GetPriorityComparison(priorityOrder));
+                    Traverse.Create(__instance).Method("UpdateUpgradeOrder").GetValue();
+                    Traverse.Create(__instance).Method("SetUpgradeListScroll", 1f).GetValue();
+                    return false;
+                }
+                catch (Exception ex)
+                {
+                    SparrohPlugin.Logger.LogError($"Failed to perform priority sort: {ex.Message}");
+                    performingPrioritySort = false;
+                    return true;
+                }
+            }
+            return true;
         }
-        return true;
+        catch (Exception ex)
+        {
+            SparrohPlugin.Logger.LogError($"Critical error in SortUpgrades_Prefix: {ex.Message}");
+            return true;
+        }
     }
 
     public static void Patch(Harmony harmony)
@@ -132,7 +148,7 @@ public static class PriorityPatches
                 }
                 catch
                 {
-                    Debug.Log($"Checked {criteria} for {a.Upgrade.Upgrade.Name} vs {b.Upgrade.Upgrade.Name}: cmp=0 (Property not found)");
+                    SparrohPlugin.Logger.LogInfo($"Checked {criteria} for {a.Upgrade.Upgrade.Name} vs {b.Upgrade.Upgrade.Name}: cmp=0 (Property not found)");
                     return 0;
                 }
             case PriorityCriteria.NotTurbocharged:
@@ -150,7 +166,7 @@ public static class PriorityPatches
                 }
                 catch
                 {
-                    Debug.Log($"Checked {criteria} for {a.Upgrade.Upgrade.Name} vs {b.Upgrade.Upgrade.Name}: cmp=0 (Property not found)");
+                    SparrohPlugin.Logger.LogInfo($"Checked {criteria} for {a.Upgrade.Upgrade.Name} vs {b.Upgrade.Upgrade.Name}: cmp=0 (Property not found)");
                     return 0;
                 }
             case PriorityCriteria.RecentlyAcquired:
@@ -188,25 +204,50 @@ public static class PriorityPatches
 
     public static List<PriorityCriteria> LoadPriorityOrder()
     {
-        if (PlayerOptions.TryGetConfig<string>("SortPriority.Order", out var json))
+        try
         {
-            var data = PriorityData.FromJson(json);
-            List<PriorityCriteria> list = new List<PriorityCriteria>();
-            foreach (int i in data.order)
+            if (PlayerOptions.TryGetConfig<string>("SortPriority.Order", out var json))
             {
-                if (Enum.IsDefined(typeof(PriorityCriteria), i))
-                    list.Add((PriorityCriteria)i);
+                try
+                {
+                    var data = PriorityData.FromJson(json);
+                    List<PriorityCriteria> list = new List<PriorityCriteria>();
+                    foreach (int i in data.order)
+                    {
+                        if (Enum.IsDefined(typeof(PriorityCriteria), i))
+                            list.Add((PriorityCriteria)i);
+                    }
+                    if (list.Count > 0)
+                    {
+                        return list;
+                    }
+                }
+                catch (Exception ex)
+                {
+                    SparrohPlugin.Logger.LogWarning($"Failed to parse priority order from config, using defaults: {ex.Message}");
+                }
             }
-            return list.Count > 0 ? list : new PriorityData().order.ConvertAll(i => (PriorityCriteria)i);
+            var defaultOrder = new PriorityData().order.ConvertAll(i => (PriorityCriteria)i);
+            return defaultOrder;
         }
-        var defaultOrder = new PriorityData().order.ConvertAll(i => (PriorityCriteria)i);
-        return defaultOrder;
+        catch (Exception ex)
+        {
+            SparrohPlugin.Logger.LogError($"Critical error loading priority order: {ex.Message}");
+            return new PriorityData().order.ConvertAll(i => (PriorityCriteria)i);
+        }
     }
 
     public static void SavePriorityOrder(List<PriorityCriteria> order)
     {
-        var data = new PriorityData { order = order.ConvertAll(c => (int)c) };
-        string json = data.ToJson();
-        PlayerOptions.SetConfig("SortPriority.Order", json);
+        try
+        {
+            var data = new PriorityData { order = order.ConvertAll(c => (int)c) };
+            string json = data.ToJson();
+            PlayerOptions.SetConfig("SortPriority.Order", json);
+        }
+        catch (Exception ex)
+        {
+            SparrohPlugin.Logger.LogError($"Failed to save priority order: {ex.Message}");
+        }
     }
 }

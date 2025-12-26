@@ -6,7 +6,6 @@ using System.Collections.Generic;
 using System.Linq;
 using System.Reflection;
 using UnityEngine;
-using UnityEngine.UI;
 using UnityEngine.EventSystems;
 
 [HarmonyPatch]
@@ -21,32 +20,59 @@ public static class LoadoutPreviewMod
 
     private static int yOffset = 0;
 
-    internal static ManualLogSource Logger;
     internal static ConfigEntry<bool> enableTextMode;
     internal static ConfigEntry<bool> enableVisualMode;
     internal static string CurrentPreviewMode;
 
     public static void ApplyPatches(Harmony harmony)
     {
-        Patch(harmony);
+        try
+        {
+            Patch(harmony);
+        }
+        catch (Exception ex)
+        {
+            SparrohPlugin.Logger.LogError($"Failed to apply LoadoutPreviewMod patches: {ex.Message}");
+        }
     }
 
     public static void OnConfigChanged()
     {
-        UpdatePreviewMode();
+        try
+        {
+            UpdatePreviewMode();
+        }
+        catch (Exception ex)
+        {
+            SparrohPlugin.Logger.LogError($"Error in LoadoutPreviewMod.OnConfigChanged: {ex.Message}");
+        }
     }
 
     public static void UpdatePreviewMode()
     {
-        string oldMode = CurrentPreviewMode;
-        if (enableTextMode.Value)
-            CurrentPreviewMode = "text";
-        else
-            CurrentPreviewMode = "disabled";
+        try
+        {
+            string oldMode = CurrentPreviewMode;
+            if (enableTextMode.Value)
+                CurrentPreviewMode = "text";
+            else
+                CurrentPreviewMode = "disabled";
+        }
+        catch (Exception ex)
+        {
+            SparrohPlugin.Logger.LogError($"Error in LoadoutPreviewMod.UpdatePreviewMode: {ex.Message}");
+        }
     }
 
     public static void Destroy()
     {
+        try
+        {
+        }
+        catch (Exception ex)
+        {
+            SparrohPlugin.Logger.LogError($"Error destroying LoadoutPreviewMod: {ex.Message}");
+        }
     }
 
     public static void Patch(Harmony harmony)
@@ -280,7 +306,7 @@ public static class LoadoutPreviewMod
         }
         catch (Exception ex)
         {
-            Debug.LogError("Error getting loadout placements: " + ex.Message);
+            SparrohPlugin.Logger.LogError("Error getting loadout placements: " + ex.Message);
         }
 
         return placements;

@@ -1,20 +1,11 @@
 ﻿using BepInEx.Logging;
-using Pigeon;
-using Pigeon.Math;
-using Pigeon.Movement;
 using System;
 using System.Collections.Generic;
-using System.Linq;
 using System.Reflection;
-using TMPro;
 using UnityEngine;
-using UnityEngine.InputSystem;
-using System.Text;
 
 public class DisplayGunDataMod
 {
-    internal ManualLogSource Logger;
-
     private bool enableGearDetailsStatsWindow;
 
     private IWeapon currentWeapon;
@@ -35,11 +26,9 @@ public class DisplayGunDataMod
     private float updateTimer = 0f;
     private List<string> statLines = new List<string>();
 
-    public DisplayGunDataMod(ManualLogSource logger, bool enable)
+    public DisplayGunDataMod(bool enable)
     {
-        Logger = logger;
         enableGearDetailsStatsWindow = enable;
-        Logger.LogInfo("DisplayGunData integrated successfully.");
     }
 
     public void SetEnable(bool enable)
@@ -142,14 +131,13 @@ public class DisplayGunDataMod
                             }
                             catch (Exception ex)
                             {
-                                Logger.LogWarning($"Error applying upgrade {upgrade.Upgrade.Name}: {ex}");
+                                SparrohPlugin.Logger.LogWarning($"Error applying upgrade {upgrade.Upgrade.Name}: {ex}");
                             }
                         }
                     }
                 }
                 else
                 {
-                    Logger.LogInfo("Cast to ModuleEquipSlots failed");
                 }
             }
         }
@@ -215,7 +203,7 @@ public class DisplayGunDataMod
         }
         catch (System.Exception ex)
         {
-            Logger.LogWarning($"Error getting BulletData: {ex.Message}");
+            SparrohPlugin.Logger.LogWarning($"Error getting BulletData: {ex.Message}");
         }
 
         currentWeapon.GunData = originalGunData;

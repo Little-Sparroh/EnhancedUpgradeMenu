@@ -1,5 +1,13 @@
 # Changelog
 
+## 1.3.0 (2025-12-24)
+
+### Major Features
+* **Hex Grid Solver**: Automatic upgrade placement system that finds optimal arrangements for selected upgrades on the hex grid. Select upgrades by hovering and pressing 'N', then use the "Solve" button to automatically place them. Supports rotation and boundary expansion.
+
+### Enhancements
+* **Grid Clear Improvement**: Modified grid clearing to unequip Boundary Incursion upgrades last for better compatibility.
+
 ## 1.2.0 (2025-12-18)
 
 ### Major Features

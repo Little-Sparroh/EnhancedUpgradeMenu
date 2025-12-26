@@ -8,12 +8,17 @@ using Pigeon;
 
 public static class FormatHandling
 {
-    internal static ManualLogSource Logger;
     public static bool enableStatReformat = true;
 
-    public static void Initialize(ManualLogSource logger)
+    public static void Initialize()
     {
-        Logger = logger;
+        try
+        {
+        }
+        catch (Exception ex)
+        {
+            SparrohPlugin.Logger.LogError($"Failed to initialize FormatHandling: {ex.Message}");
+        }
     }
 
     public static void ReformatStats(Upgrade __instance, ref string text)
@@ -149,7 +154,7 @@ public static class HoverInfoDisplayReformatPatch
         }
         catch (Exception ex)
         {
-            if (FormatHandling.Logger != null) FormatHandling.Logger.LogWarning($"HoverInfoDisplayReformatPatch: Failed: {ex.Message}");
+            SparrohPlugin.Logger.LogWarning($"HoverInfoDisplayReformatPatch: Failed: {ex.Message}");
         }
     }
 }
@@ -185,7 +190,7 @@ public static class HoverInfoDisplayRefreshReformatPatch
         }
         catch (Exception ex)
         {
-            if (FormatHandling.Logger != null) FormatHandling.Logger.LogWarning($"HoverInfoDisplayRefreshReformatPatch: Failed: {ex.Message}");
+            SparrohPlugin.Logger.LogWarning($"HoverInfoDisplayRefreshReformatPatch: Failed: {ex.Message}");
         }
     }
 }

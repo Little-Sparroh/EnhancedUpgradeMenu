@@ -1,146 +1,86 @@
 # Enhanced Upgrade Menu
 
-A comprehensive BepInEx mod for MycoPunk that massively enhances the upgrade management experience with powerful new functionality and improved usability.
-
-## Description
-
-Enhanced Upgrade Menu transforms the gear upgrade interface with a suite of advanced tools designed to help you manage your gear more efficiently and share build configurations with the community.
+A BepInEx mod for MycoPunk that enhances the upgrade management experience with advanced features for sorting, filtering, comparing, and optimizing gear builds.
 
 ## Features
 
-### 🏗️ Build Management & Sharing
+### Core Functionality
+- **Hex Grid Solver**: Automatic upgrade placement system that finds optimal arrangements for selected upgrades on the hex grid. Select upgrades by hovering and pressing 'N', then use the "Solve" button to automatically place them with support for rotation and boundary expansion.
+- **Gun Data Display**: Comprehensive weapon stats preview window showing damage, fire rate, ammo capacity, recoil, spread, bullet data, and more when viewing gear details.
+- **Grid Sharing System**: Copy complete gear build layouts to shareable codes and paste builds from others using binary encoding for compact build codes.
+- **Advanced Filter Panel**: Comprehensive filtering by rarity, favorites, and stat requirements with real-time updates.
+- **Priority Sort System**: Fully customizable sorting criteria with drag-and-drop reordering and persistent settings.
+- **Loadout Management**: Expanded loadouts with pagination, preview functionality (text and visual modes), and configurable renaming.
 
-**Grid Sharing System**
-- Copy complete gear build layouts (positions, rotations, upgrade IDs) to compact shareable codes
-- Paste build codes from other players to instantly recreate their gear configurations
-- Perfect for sharing optimized builds within the MycoPunk community
-- Auto-adjusts positioning if grid space conflicts occur
+### UI Enhancements
+- **Stat Display Formatting**: Reformats upgrade stats from "50 Damage" to "Damage: **50**" for improved readability.
+- **Comparison Mode**: Side-by-side comparison of two upgrades with detailed tooltips.
+- **Mass Scrapping**: Scrap marked or non-favorite upgrades with confirmation dialogs, including instant scrapping option.
+- **Grid Clear Function**: Instantly remove all upgrades from the gear grid with a single click, unequipping Boundary Incursion upgrades last for better compatibility.
+- **Loadout Scrolling**: Bidirectional scrolling with independent left and right keys for navigating loadout pages.
 
-**Upgrade Comparison**
-- Compare two upgrades side-by-side with simultaneous tooltips
-- Hold any upgrade and press **C** to enter comparison mode
-- Displays stats and details for easy decision making
-
-**Smart Scrapping**
-- Mark upgrades for scrapping with **T** key
-- Mass scrap all marked upgrades or all non-favorite upgrades
-- Confirmation dialogs prevent accidental deletion
-- Instant scrapping option (configurable) skips confirmation timers
-
-### 🔍 Advanced Filtering & Sorting
-
-**Comprehensive Filter Panel**
-- Toggle filtering by upgrade rarity (Standard, Rare, Epic, Exotic, Oddity)
-- Show/hide favorites or show only favorited upgrades
-- Filter by stat requirements (upgrades must have ALL selected properties)
-- Clears all filters with one click
-- Real-time updates as you adjust filters
-
-**Priority Sort System**
-- Customizable sorting criteria with drag-and-drop reordering
-- Sort by: Favorited status, Lock status, Rarity, Turbocharged state, Recently used/acquired, Instance name
-- Save and load your preferred sort priorities
-- Persistent settings across game sessions
-
-### 🎨 Quality of Life Improvements
-
-**UI Enhancements**
-- Configurable hotkeys for all major functions
-- Loadout expansion/pagination (press **.** to cycle pages)
-- Stat display reformatting: "50 Damage" → "Damage: **50**"
-- Clean, intuitive interface with color-coded buttons
-- **Gun Data Display**: Comprehensive weapon stats preview window showing damage, fire rate, ammo capacity, recoil, spread, and bullet data
-- **Grid Clear Function**: "Clear Grid" button to instantly remove all upgrades from the gear grid
-- **Loadout Previewing**: Preview loadout contents when hovering over loadout buttons (text and visual modes)
-
-**Configuration Options**
-- Hotkey customization (trash marking, comparison, page toggle)
-- Instant scrapping toggle
-- Fixed scrap timer duration
-- Stat formatting on/off
-- All settings persist between game sessions
+### Configuration
+- **Configurable Keybindings**: Customizable keys for trash marking, loadout scrolling, renaming, and comparison with hot reload support.
+- **Persistent Settings**: Settings for sort priorities, filters, and UI options are saved and restored between sessions.
 
 ## Getting Started
 
-### Requirements
-- **MycoPunk** (base game)
-- **[BepInEx 5.4.2403](https://github.com/BepInEx/BepInEx)** or compatible version
-- **.NET Framework 4.8**
-- **[HarmonyLib](https://github.com/pardeike/Harmony)** (included via NuGet)
+### Dependencies
 
-### Installation
-1. Download from Thunderstore Mod Manager or install BepInEx manually
-2. Place `EnhancedUpgradeMenu.dll` in `<MycoPunk Directory>/BepInEx/plugins/`
-3. Launch MycoPunk - the mod loads automatically through BepInEx
+* MycoPunk (base game)
+* [BepInEx](https://github.com/BepInEx/BepInEx) - Version 5.4.2403 or compatible
+* .NET Framework 4.8
+* [HarmonyLib](https://github.com/pardeike/Harmony) (included via NuGet)
 
-### First Time Setup
-- Access the gear details window for any piece of equipment
-- New buttons appear: **Priority Sort**, **Filter**, **Scrap Marked**, **Scrap Non Favorite**
-- **Copy Grid** / **Paste Code** buttons appear for sharing builds
-- Configure hotkeys in the BepInEx config file if desired
+### Building/Compiling
 
-## Usage Guide
-
-### Grid Sharing
-1. Arrange your upgrades on the gear grid as desired
-2. Click **Copy Grid** to copy a shareable code to clipboard
-3. Share the code with others or save it for later
-4. Click **Paste Code** to instantly recreate any shared build
-
-### Filtering Upgrades
-1. Click the **Filter** button to open the advanced filter panel
-2. Toggle rarities on/off, set favorite filters, select required stats
-3. Only upgrades matching ALL criteria remain visible
-4. Use **Clear All Filters** to reset
-
-### Custom Sorting
-1. Click **Priority Sort** to open the customization window
-2. Drag criteria up/down to change sort priority order
-3. Click **Save** to apply your preferences
-4. The **Reset** button restores defaults
-
-### Hotkeys
-- **T**: Toggle trash mark on hovered upgrade
-- **C**: Toggle upgrade comparison mode
-- **.**: Cycle loadout pages
-
-## Development
-
-### Building from Source
 1. Clone this repository
-2. Ensure .NET Framework 4.8 SDK is installed
-3. Run `dotnet build --configuration Release`
-4. Find the compiled DLL in `bin/Release/net48/`
+2. Open the solution file in Visual Studio, Rider, or your preferred C# IDE
+3. Build the project in Release mode to generate the .dll file
 
-### Project Structure
-- `Plugin.cs` - Main plugin entry point and configuration
-- `CompareHandling.cs` - Side-by-side upgrade comparison
-- `ScrapHandling.cs` - Mass scrapping functionality
-- `FilterHandling.cs` - Advanced filtering panel
-- `SortHandling.cs` - Priority-based sorting system
-- `SharingButtons.cs` - Grid copy/paste functionality
-- Various patches for UI integration and harmony modifications
+Alternatively, use dotnet CLI:
+```bash
+dotnet build --configuration Release
+```
 
-### Publishing
-- Update version in `Plugin.cs` and `thunderstore.toml`
-- Build in Release mode
-- Use Thunderstore CLI for publishing
+### Installing
 
-## Contributing
+**Via Thunderstore (Recommended)**:
+1. Download and install via Thunderstore Mod Manager
+2. The mod will be automatically installed to the correct directory
 
-We welcome contributions! This mod is developed for the MycoPunk community by players who want to enhance their upgrade management experience.
+**Manual Installation**:
+1. Place the built `EnhancedUpgradeMenu.dll` in your `<MycoPunk Directory>/BepInEx/plugins/` folder
+
+### Executing program
+
+The mod loads automatically through BepInEx when the game starts. Check the BepInEx console for loading confirmation messages.
+
+## Configuration
+
+Access mod settings through the BepInEx configuration file at `<MycoPunk Directory>/BepInEx/config/sparroh.enhancedupgrademenu.cfg`. Key options include:
+
+- Keybinds for various actions (trash marking, scrolling, renaming, comparison)
+- Toggle for instant scrapping
+- Enable/disable stat reformatting and gun data display
+- Loadout preview settings
+
+## Help
+
+* **Mod not loading?** Verify BepInEx is installed correctly and check console logs for errors
+* **Keybinds not working?** Ensure no conflicts with other mods or game settings
+* **Grid solver issues?** Make sure upgrades are selected before solving (hover and press 'N')
+* **Sharing not working?** Check clipboard permissions and ensure the build code is valid
+* **UI elements missing?** Confirm mod version compatibility and verify no other mods are interfering
 
 ## Authors
-* Sparroh
-* funlennysub (original mod template)
-* [@DomPizzie](https://twitter.com/dompizzie) (README template)
-* Coloron - Original LoadoutScrolling extension
-* funlennysub (original grid encoding)
-* Generally Break (coaching for efficient grid encoding)
+
+- Sparroh
+- Coloron (Loadout Expander)
+- funlennysub (BepInEx template // Hex Grid Solver)
+- Generally Break (Efficient encoding)
+- [@DomPizzie](https://twitter.com/dompizzie) (README template)
 
 ## License
-This project is licensed under the MIT License - see the LICENSE.md file for details
 
----
-
-*Transform your gear upgrading workflow with Enhanced Upgrade Menu - where efficiency meets elegance.*
+This project is licensed under the MIT License - see the LICENSE file for details

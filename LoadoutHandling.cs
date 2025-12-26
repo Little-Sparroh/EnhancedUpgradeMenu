@@ -464,7 +464,7 @@ public static class LoadoutHoverInfoPatches
                     {
                         string key = $"{gear.Info.ID}_{loadoutIndex}";
                         string savedName = PlayerPrefs.GetString("LoadoutName_" + key, "");
-                        Debug.Log($"Retrieving name for gear {gear.Info.ID} slot {loadoutIndex}: key='{key}' name='{savedName}'");
+                        SparrohPlugin.Logger.LogInfo($"Retrieving name for gear {gear.Info.ID} slot {loadoutIndex}: key='{key}' name='{savedName}'");
                         if (!string.IsNullOrEmpty(savedName))
                         {
                             if (!windowLoadoutNames.TryGetValue(window, out var namesDict))
@@ -523,7 +523,7 @@ public static class LoadoutHoverInfoPatches
                     if (gear != null)
                     {
                         string key = $"{gear.Info.ID}_{loadoutIndex}";
-                        Debug.Log($"Saving name for gear {gear.Info.ID} slot {loadoutIndex}: key='{key}' name='{newName}'");
+                        SparrohPlugin.Logger.LogInfo($"Saving name for gear {gear.Info.ID} slot {loadoutIndex}: key='{key}' name='{newName}'");
                         if (!string.IsNullOrEmpty(newName))
                         {
                             PlayerPrefs.SetString("LoadoutName_" + key, newName);
@@ -1185,7 +1185,7 @@ public static void GearDetailsWindowUpdatePostfix(ref GearDetailsWindow __instan
                 if (names.TryGetValue(index, out string name))
                 {
                     string key = $"{gear.Info.ID}_{gear.GetHashCode()}_{index}";
-                    Debug.Log($"Persisting name for gear {gear.Info.ID} slot {index}: key='{key}' name='{name}'");
+                    SparrohPlugin.Logger.LogInfo($"Persisting name for gear {gear.Info.ID} slot {index}: key='{key}' name='{name}'");
                     PlayerPrefs.SetString("LoadoutName_" + key, name);
                     PlayerPrefs.Save();
                 }

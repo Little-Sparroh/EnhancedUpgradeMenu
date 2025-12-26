@@ -8,7 +8,6 @@ using UnityEngine.InputSystem;
 public static class LoadoutExpanderMod
 {
     public static int PageOffset = 0;
-    internal static ManualLogSource LoggerSource;
 
     internal static FieldInfo _loadoutButtonsField;
     internal static FieldInfo _upgradableField;
@@ -67,7 +66,7 @@ public static class LoadoutExpanderMod
         }
         catch (Exception e)
         {
-            LoggerSource.LogError("Error refreshing window: " + e.Message);
+            SparrohPlugin.Logger.LogError("Error refreshing window: " + e.Message);
         }
     }
 }

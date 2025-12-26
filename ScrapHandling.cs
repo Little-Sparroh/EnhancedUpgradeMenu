@@ -1,4 +1,5 @@
-﻿using HarmonyLib;
+﻿using System;
+using HarmonyLib;
 using System.Collections;
 using System.Collections.Generic;
 using System.Linq;
@@ -25,121 +26,166 @@ public static Key currentTrashKey;
 
     public static IEnumerator ScrapMarkedUpgrades()
     {
-        if (isScrapping)
-        {
-            yield break;
-        }
-
-        isScrapping = true;
-
-        var gearWindow = UnityEngine.Object.FindObjectOfType<GearDetailsWindow>();
-        if (gearWindow == null)
-        {
-            isScrapping = false;
-            yield break;
-        }
-
-        var gear = gearWindow.UpgradablePrefab;
-        if (gear == null)
-        {
-            isScrapping = false;
-            yield break;
-        }
-
-        var inSkinModeField = AccessTools.Field(typeof(GearDetailsWindow), "inSkinMode");
-        bool inSkinMode = (bool)inSkinModeField.GetValue(gearWindow);
-        bool isSkinsMode = inSkinMode;
-        var all = inSkinMode ? PlayerData.GetAllSkins(gear) : PlayerData.GetAllUpgrades(gear);
-        int totalCount = 0;
-        foreach (var info in all)
-        {
-            if (info?.Instances == null) continue;
-            totalCount += info.Instances.Count;
-        }
-        List<UpgradeInstance> toScrap = new List<UpgradeInstance>(totalCount);
-        foreach (var info in all)
-        {
-            if (info?.Instances == null) continue;
-            foreach (var inst in info.Instances)
-            {
-                if (inst != null && IsTrashMarked(inst))
-                {
-                    toScrap.Add(inst);
-                }
-            }
-        }
-
-        if (toScrap.Count == 0)
-        {
-            isScrapping = false;
-            yield break;
-        }
-
-        var grouped = toScrap.GroupBy(inst => inst.Upgrade.Rarity).ToDictionary(g => g.Key, g => g.ToList());
+        bool setupSuccess = false;
+        bool inSkinMode = false;
+        bool isSkinsMode = false;
+        List<UpgradeInstance> toScrap = null;
         var totalResources = new System.Collections.Generic.Dictionary<PlayerResource, int>();
-        foreach (var group in grouped)
-        {
-            var rarityKey = group.Key;
-            var count = group.Value.Count;
-            ref RarityData rarity = ref Global.GetRarity(rarityKey);
-            int scrip = rarity.upgradeScripCost / 6;
-            totalResources.TryGetValue(Global.Instance.ScripResource, out int existingScrip);
-            totalResources[Global.Instance.ScripResource] = existingScrip + scrip * count;
-
-            if (!isSkinsMode)
-            {
-                totalResources.TryGetValue(rarity.scrapResource, out int existingScrap);
-                totalResources[rarity.scrapResource] = existingScrap + 2 * count;
-
-                if (PlayerResource.TryGetResource("strange_comp", out var strangeRes))
-                {
-                    int strangeCount = Mathf.FloorToInt(count * SPECIAL_REWARD_CHANCE);
-                    totalResources.TryGetValue(strangeRes, out int existingStrange);
-                    totalResources[strangeRes] = existingStrange + strangeCount;
-                }
-            }
-            else
-            {
-                if (PlayerResource.TryGetResource("oyster", out var oysterRes))
-                {
-                    int oysterCount = Mathf.FloorToInt(count * SPECIAL_REWARD_CHANCE);
-                    totalResources.TryGetValue(oysterRes, out int existingOyster);
-                    totalResources[oysterRes] = existingOyster + oysterCount;
-                }
-            }
-        }
-
         int scrappedCount = 0;
-        for (int i = 0; i < toScrap.Count; i += BATCH_SIZE)
-        {
-            int batchNumber = i / BATCH_SIZE + 1;
-            int batchEnd = Mathf.Min(i + BATCH_SIZE, toScrap.Count);
-            for (int j = i; j < batchEnd; j++)
-            {
-                var inst = toScrap[j];
-                if (inst == null || inst.Upgrade == null)
-                {
-                    continue;
-                }
 
-                inst.Destroy();
-                scrappedCount++;
-            }
-            if (BATCH_INTERVAL > 0f)
+        try
+        {
+            if (isScrapping)
             {
-                yield return new WaitForSeconds(BATCH_INTERVAL);
+                SparrohPlugin.Logger.LogWarning("ScrapMarkedUpgrades: Already scrapping, aborting.");
+                yield break;
+            }
+
+            isScrapping = true;
+            SparrohPlugin.Logger.LogInfo("Starting ScrapMarkedUpgrades operation.");
+
+            var gearWindow = UnityEngine.Object.FindObjectOfType<GearDetailsWindow>();
+            if (gearWindow == null)
+            {
+                SparrohPlugin.Logger.LogError("ScrapMarkedUpgrades: GearDetailsWindow not found.");
+                isScrapping = false;
+                yield break;
+            }
+
+            var gear = gearWindow.UpgradablePrefab;
+            if (gear == null)
+            {
+                SparrohPlugin.Logger.LogError("ScrapMarkedUpgrades: UpgradablePrefab is null.");
+                isScrapping = false;
+                yield break;
+            }
+
+            var inSkinModeField = AccessTools.Field(typeof(GearDetailsWindow), "inSkinMode");
+            inSkinMode = (bool)inSkinModeField.GetValue(gearWindow);
+            isSkinsMode = inSkinMode;
+
+            IEnumerable<UpgradeInfo> all = inSkinMode ? PlayerData.GetAllSkins(gear) : PlayerData.GetAllUpgrades(gear);
+
+            int totalCount = 0;
+            foreach (var info in all)
+            {
+                if (info?.Instances == null) continue;
+                totalCount += info.Instances.Count;
+            }
+
+            toScrap = new List<UpgradeInstance>(totalCount);
+            foreach (var info in all)
+            {
+                if (info?.Instances == null) continue;
+                foreach (var inst in info.Instances)
+                {
+                    if (inst != null && IsTrashMarked(inst))
+                    {
+                        toScrap.Add(inst);
+                    }
+                }
+            }
+
+            if (toScrap.Count == 0)
+            {
+                SparrohPlugin.Logger.LogInfo("ScrapMarkedUpgrades: No marked upgrades found.");
+                isScrapping = false;
+                yield break;
+            }
+
+            SparrohPlugin.Logger.LogInfo($"ScrapMarkedUpgrades: Processing {toScrap.Count} upgrades.");
+
+            var grouped = toScrap.GroupBy(inst => inst.Upgrade.Rarity).ToDictionary(g => g.Key, g => g.ToList());
+
+            foreach (var group in grouped)
+            {
+                var rarityKey = group.Key;
+                var count = group.Value.Count;
+                ref RarityData rarity = ref Global.GetRarity(rarityKey);
+                int scrip = rarity.upgradeScripCost / 6;
+                totalResources.TryGetValue(Global.Instance.ScripResource, out int existingScrip);
+                totalResources[Global.Instance.ScripResource] = existingScrip + scrip * count;
+
+                if (!isSkinsMode)
+                {
+                    totalResources.TryGetValue(rarity.scrapResource, out int existingScrap);
+                    totalResources[rarity.scrapResource] = existingScrap + 2 * count;
+
+                    if (PlayerResource.TryGetResource("strange_comp", out var strangeRes))
+                    {
+                        int strangeCount = Mathf.FloorToInt(count * SPECIAL_REWARD_CHANCE);
+                        totalResources.TryGetValue(strangeRes, out int existingStrange);
+                        totalResources[strangeRes] = existingStrange + strangeCount;
+                    }
+                }
+                else
+                {
+                    if (PlayerResource.TryGetResource("oyster", out var oysterRes))
+                    {
+                        int oysterCount = Mathf.FloorToInt(count * SPECIAL_REWARD_CHANCE);
+                        totalResources.TryGetValue(oysterRes, out int existingOyster);
+                        totalResources[oysterRes] = existingOyster + oysterCount;
+                    }
+                }
+            }
+
+            setupSuccess = true;
+        }
+        catch (Exception ex)
+        {
+            SparrohPlugin.Logger.LogError($"ScrapMarkedUpgrades: Setup failed: {ex.Message}");
+            isScrapping = false;
+            yield break;
+        }
+
+        if (setupSuccess && toScrap != null)
+        {
+            for (int i = 0; i < toScrap.Count; i += BATCH_SIZE)
+            {
+                int batchEnd = Mathf.Min(i + BATCH_SIZE, toScrap.Count);
+                for (int j = i; j < batchEnd; j++)
+                {
+                    var inst = toScrap[j];
+                    if (inst == null || inst.Upgrade == null)
+                    {
+                        continue;
+                    }
+
+                    inst.Destroy();
+                    scrappedCount++;
+                }
+                if (BATCH_INTERVAL > 0f)
+                {
+                    yield return new WaitForSeconds(BATCH_INTERVAL);
+                }
             }
         }
-        foreach (var kvp in totalResources)
+
+        try
         {
-            PlayerData.Instance.AddResource(kvp.Key, kvp.Value);
+            foreach (var kvp in totalResources)
+            {
+                PlayerData.Instance.AddResource(kvp.Key, kvp.Value);
+            }
+        }
+        catch (Exception ex)
+        {
+            SparrohPlugin.Logger.LogError($"ScrapMarkedUpgrades: Failed to add resources: {ex.Message}");
         }
 
         if (scrappedCount > 0)
         {
-            wasScrappingSkins = isSkinsMode;
-            RefreshOpenWindows();
+            try
+            {
+                wasScrappingSkins = isSkinsMode;
+                RefreshOpenWindows();
+            }
+            catch (Exception ex)
+            {
+                SparrohPlugin.Logger.LogError($"ScrapMarkedUpgrades: Failed to refresh windows: {ex.Message}");
+            }
         }
+
         isScrapping = false;
     }
 
@@ -220,121 +266,166 @@ public static void TryScrapMarkedUpgrades(MonoBehaviour owner)
 
     public static IEnumerator ScrapNonFavoriteUpgrades()
     {
-        if (isScrapping)
-        {
-            yield break;
-        }
-
-        isScrapping = true;
-
-        var gearWindow = UnityEngine.Object.FindObjectOfType<GearDetailsWindow>();
-        if (gearWindow == null)
-        {
-            isScrapping = false;
-            yield break;
-        }
-
-        var gear = gearWindow.UpgradablePrefab;
-        if (gear == null)
-        {
-            isScrapping = false;
-            yield break;
-        }
-
-        var inSkinModeField = AccessTools.Field(typeof(GearDetailsWindow), "inSkinMode");
-        bool inSkinMode = (bool)inSkinModeField.GetValue(gearWindow);
-        bool isSkinsMode = inSkinMode;
-        var all = inSkinMode ? PlayerData.GetAllSkins(gear) : PlayerData.GetAllUpgrades(gear);
-        int totalCount = 0;
-        foreach (var info in all)
-        {
-            if (info?.Instances == null) continue;
-            totalCount += info.Instances.Count;
-        }
-        List<UpgradeInstance> toScrap = new List<UpgradeInstance>(totalCount);
-        foreach (var info in all)
-        {
-            if (info?.Instances == null) continue;
-            foreach (var inst in info.Instances)
-            {
-                if (inst != null && !IsFavorite(inst))
-                {
-                    toScrap.Add(inst);
-                }
-            }
-        }
-
-        if (toScrap.Count == 0)
-        {
-            isScrapping = false;
-            yield break;
-        }
-
-        var grouped = toScrap.GroupBy(inst => inst.Upgrade.Rarity).ToDictionary(g => g.Key, g => g.ToList());
+        bool setupSuccess = false;
+        bool inSkinMode = false;
+        bool isSkinsMode = false;
+        List<UpgradeInstance> toScrap = null;
         var totalResources = new System.Collections.Generic.Dictionary<PlayerResource, int>();
-        foreach (var group in grouped)
+        int scrappedCount = 0;
+
+        try
         {
-            var rarityKey = group.Key;
-            var count = group.Value.Count;
-            ref RarityData rarity = ref Global.GetRarity(rarityKey);
-            int scrip = rarity.upgradeScripCost / 6;
-            totalResources.TryGetValue(Global.Instance.ScripResource, out int existingScrip);
-            totalResources[Global.Instance.ScripResource] = existingScrip + scrip * count;
-
-            if (!isSkinsMode)
+            if (isScrapping)
             {
-                totalResources.TryGetValue(rarity.scrapResource, out int existingScrap);
-                totalResources[rarity.scrapResource] = existingScrap + 2 * count;
+                SparrohPlugin.Logger.LogWarning("ScrapNonFavoriteUpgrades: Already scrapping, aborting.");
+                yield break;
+            }
 
-                if (PlayerResource.TryGetResource("strange_comp", out var strangeRes))
+            isScrapping = true;
+            SparrohPlugin.Logger.LogInfo("Starting ScrapNonFavoriteUpgrades operation.");
+
+            var gearWindow = UnityEngine.Object.FindObjectOfType<GearDetailsWindow>();
+            if (gearWindow == null)
+            {
+                SparrohPlugin.Logger.LogError("ScrapNonFavoriteUpgrades: GearDetailsWindow not found.");
+                isScrapping = false;
+                yield break;
+            }
+
+            var gear = gearWindow.UpgradablePrefab;
+            if (gear == null)
+            {
+                SparrohPlugin.Logger.LogError("ScrapNonFavoriteUpgrades: UpgradablePrefab is null.");
+                isScrapping = false;
+                yield break;
+            }
+
+            var inSkinModeField = AccessTools.Field(typeof(GearDetailsWindow), "inSkinMode");
+            inSkinMode = (bool)inSkinModeField.GetValue(gearWindow);
+            isSkinsMode = inSkinMode;
+
+            IEnumerable<UpgradeInfo> all = inSkinMode ? PlayerData.GetAllSkins(gear) : PlayerData.GetAllUpgrades(gear);
+
+            int totalCount = 0;
+            foreach (var info in all)
+            {
+                if (info?.Instances == null) continue;
+                totalCount += info.Instances.Count;
+            }
+
+            toScrap = new List<UpgradeInstance>(totalCount);
+            foreach (var info in all)
+            {
+                if (info?.Instances == null) continue;
+                foreach (var inst in info.Instances)
                 {
-                    int strangeCount = Mathf.FloorToInt(count * SPECIAL_REWARD_CHANCE);
-                    totalResources.TryGetValue(strangeRes, out int existingStrange);
-                    totalResources[strangeRes] = existingStrange + strangeCount;
+                    if (inst != null && !IsFavorite(inst))
+                    {
+                        toScrap.Add(inst);
+                    }
                 }
             }
-            else
+
+            if (toScrap.Count == 0)
             {
-                if (PlayerResource.TryGetResource("oyster", out var oysterRes))
+                SparrohPlugin.Logger.LogInfo("ScrapNonFavoriteUpgrades: No non-favorite upgrades found.");
+                isScrapping = false;
+                yield break;
+            }
+
+            SparrohPlugin.Logger.LogInfo($"ScrapNonFavoriteUpgrades: Processing {toScrap.Count} upgrades.");
+
+            var grouped = toScrap.GroupBy(inst => inst.Upgrade.Rarity).ToDictionary(g => g.Key, g => g.ToList());
+
+            foreach (var group in grouped)
+            {
+                var rarityKey = group.Key;
+                var count = group.Value.Count;
+                ref RarityData rarity = ref Global.GetRarity(rarityKey);
+                int scrip = rarity.upgradeScripCost / 6;
+                totalResources.TryGetValue(Global.Instance.ScripResource, out int existingScrip);
+                totalResources[Global.Instance.ScripResource] = existingScrip + scrip * count;
+
+                if (!isSkinsMode)
                 {
-                    int oysterCount = Mathf.FloorToInt(count * SPECIAL_REWARD_CHANCE);
-                    totalResources.TryGetValue(oysterRes, out int existingOyster);
-                    totalResources[oysterRes] = existingOyster + oysterCount;
+                    totalResources.TryGetValue(rarity.scrapResource, out int existingScrap);
+                    totalResources[rarity.scrapResource] = existingScrap + 2 * count;
+
+                    if (PlayerResource.TryGetResource("strange_comp", out var strangeRes))
+                    {
+                        int strangeCount = Mathf.FloorToInt(count * SPECIAL_REWARD_CHANCE);
+                        totalResources.TryGetValue(strangeRes, out int existingStrange);
+                        totalResources[strangeRes] = existingStrange + strangeCount;
+                    }
+                }
+                else
+                {
+                    if (PlayerResource.TryGetResource("oyster", out var oysterRes))
+                    {
+                        int oysterCount = Mathf.FloorToInt(count * SPECIAL_REWARD_CHANCE);
+                        totalResources.TryGetValue(oysterRes, out int existingOyster);
+                        totalResources[oysterRes] = existingOyster + oysterCount;
+                    }
                 }
             }
+
+            setupSuccess = true;
+        }
+        catch (Exception ex)
+        {
+            SparrohPlugin.Logger.LogError($"ScrapNonFavoriteUpgrades: Setup failed: {ex.Message}");
+            isScrapping = false;
+            yield break;
         }
 
-        int scrappedCount = 0;
-        for (int i = 0; i < toScrap.Count; i += BATCH_SIZE)
+        if (setupSuccess && toScrap != null)
         {
-            int batchNumber = i / BATCH_SIZE + 1;
-            int batchEnd = Mathf.Min(i + BATCH_SIZE, toScrap.Count);
-            for (int j = i; j < batchEnd; j++)
+            for (int i = 0; i < toScrap.Count; i += BATCH_SIZE)
             {
-                var inst = toScrap[j];
-                if (inst == null || inst.Upgrade == null)
+                int batchEnd = Mathf.Min(i + BATCH_SIZE, toScrap.Count);
+                for (int j = i; j < batchEnd; j++)
                 {
-                    continue;
-                }
+                    var inst = toScrap[j];
+                    if (inst == null || inst.Upgrade == null)
+                    {
+                        continue;
+                    }
 
                     inst.Destroy();
                     scrappedCount++;
-            }
-            if (BATCH_INTERVAL > 0f)
-            {
-                yield return new WaitForSeconds(BATCH_INTERVAL);
+                }
+                if (BATCH_INTERVAL > 0f)
+                {
+                    yield return new WaitForSeconds(BATCH_INTERVAL);
+                }
             }
         }
-        foreach (var kvp in totalResources)
+
+        try
         {
-            PlayerData.Instance.AddResource(kvp.Key, kvp.Value);
+            foreach (var kvp in totalResources)
+            {
+                PlayerData.Instance.AddResource(kvp.Key, kvp.Value);
+            }
+        }
+        catch (Exception ex)
+        {
+            SparrohPlugin.Logger.LogError($"ScrapNonFavoriteUpgrades: Failed to add resources: {ex.Message}");
         }
 
         if (scrappedCount > 0)
         {
-            wasScrappingSkins = isSkinsMode;
-            RefreshOpenWindows();
+            try
+            {
+                wasScrappingSkins = isSkinsMode;
+                RefreshOpenWindows();
+            }
+            catch (Exception ex)
+            {
+                SparrohPlugin.Logger.LogError($"ScrapNonFavoriteUpgrades: Failed to refresh windows: {ex.Message}");
+            }
         }
+
         isScrapping = false;
     }
 
