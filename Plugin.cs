@@ -14,7 +14,7 @@ public class SparrohPlugin : BaseUnityPlugin
 {
     public const string PluginGUID = "sparroh.enhancedupgrademenu";
     public const string PluginName = "EnhancedUpgradeMenu";
-    public const string PluginVersion = "1.2.0";
+    public const string PluginVersion = "1.3.1";
 
     private ConfigEntry<Key> TrashMarkKey;
     private ConfigEntry<Key> ScrollLeftKey;

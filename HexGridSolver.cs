@@ -297,7 +297,7 @@ public class Solver
             var offset = GetOffsetsCached(upgrade, rotation, cell);
             var (offsetX, offsetY) = (offset.OffsetX, offset.OffsetY);
 
-            if (!_equipSlots.EquipModule(_gear, upgrade, offsetX, offsetY, (byte)rotation))
+            if (!_equipSlots.EquipModule(_gear, upgrade, offsetX, offsetY, (byte)rotation, true))
                 continue;
 
             yield return SolveDfs(index + 1);
@@ -356,7 +356,7 @@ public class Solver
                         if (cell != null && cell.Upgrade == null)
                         {
                             var offset = GetOffsetsCached(boundary, rot, cell);
-                            if (_equipSlots.EquipModule(_gear, boundary, offset.OffsetX, offset.OffsetY, (byte)rot))
+                            if (_equipSlots.EquipModule(_gear, boundary, offset.OffsetX, offset.OffsetY, (byte)rot, true))
                             {
                                 boundaryPlaced = true;
                                 break;

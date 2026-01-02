@@ -1,5 +1,11 @@
 # Changelog
 
+## 1.3.1 (2026-01-02)
+
+### Bug Fixes
+* **Grid Solver Fix**: Restored functionality after recent game update that broke the gridsolver
+* **Format Handling Fix**: Stat formatting no longer affects hover info in the directive window
+
 ## 1.3.0 (2025-12-24)
 
 ### Major Features

@@ -13,7 +13,7 @@ A BepInEx mod for MycoPunk that enhances the upgrade management experience with 
 - **Loadout Management**: Expanded loadouts with pagination, preview functionality (text and visual modes), and configurable renaming.
 
 ### UI Enhancements
-- **Stat Display Formatting**: Reformats upgrade stats from "50 Damage" to "Damage: **50**" for improved readability.
+- **Stat Display Formatting**: Reformats upgrade stats from "50 Damage" to "Damage: **50**" for improved readability (does not affect directive window hover information).
 - **Comparison Mode**: Side-by-side comparison of two upgrades with detailed tooltips.
 - **Mass Scrapping**: Scrap marked or non-favorite upgrades with confirmation dialogs, including instant scrapping option.
 - **Grid Clear Function**: Instantly remove all upgrades from the gear grid with a single click, unequipping Boundary Incursion upgrades last for better compatibility.

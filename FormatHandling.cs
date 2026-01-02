@@ -132,7 +132,7 @@ public static class HoverInfoDisplayReformatPatch
 {
     static void Postfix(HoverInfoDisplay __instance, HoverInfo info, bool resetPosition)
     {
-        if (!FormatHandling.enableStatReformat || info == null)
+        if (!FormatHandling.enableStatReformat || info == null || info.GetType().Name == "DirectiveButton")
             return;
 
 
@@ -169,7 +169,7 @@ public static class HoverInfoDisplayRefreshReformatPatch
         if (selectedField == null)
             return;
         var selected = selectedField.GetValue(__instance) as HoverInfo;
-        if (!FormatHandling.enableStatReformat || selected == null)
+        if (!FormatHandling.enableStatReformat || selected == null || selected.GetType().Name == "DirectiveButton")
             return;
 
         try

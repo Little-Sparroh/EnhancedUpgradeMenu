@@ -240,12 +240,12 @@ public class SharingButtons : MonoBehaviour
         offsetY += adjustY;
         equipSlots.Unequip(window.UpgradablePrefab, upgrade);
         bool flag = equipSlots.Unequip(window.UpgradablePrefab, upgrade);
-        bool result = equipSlots.EquipModule(window.UpgradablePrefab, upgrade, offsetX, offsetY, up.Rotation);
+        bool result = equipSlots.EquipModule(window.UpgradablePrefab, upgrade, offsetX, offsetY, up.Rotation, true);
         if (!(result || flag))
         {
             equipSlots.Unequip(window.UpgradablePrefab, upgrade);
             flag = equipSlots.Unequip(window.UpgradablePrefab, upgrade);
-            result = equipSlots.EquipModule(window.UpgradablePrefab, upgrade, offsetX, offsetY - 1, up.Rotation);
+            result = equipSlots.EquipModule(window.UpgradablePrefab, upgrade, offsetX, offsetY - 1, up.Rotation, true);
             if (!(result || flag))
             {
             }
@@ -267,7 +267,7 @@ public class SharingButtons : MonoBehaviour
                 if (deltaX != 0 || deltaY != 0)
                 {
                     equipSlots.Unequip(window.UpgradablePrefab, upgrade);
-                    bool adjustedResult = equipSlots.EquipModule(window.UpgradablePrefab, upgrade, offsetX + deltaX, offsetY + deltaY, up.Rotation);
+                    bool adjustedResult = equipSlots.EquipModule(window.UpgradablePrefab, upgrade, offsetX + deltaX, offsetY + deltaY, up.Rotation, true);
                     if (!adjustedResult)
                     {
                     }

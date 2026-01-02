@@ -15,13 +15,13 @@ public static class GearDetailsWindow_Patch
 public static class EquipModule_Patch
 {
     [HarmonyPrefix]
-    static void Prefix(object target, object upgrade, int offsetX, int offsetY, byte rotation)
+    static void Prefix(object target, object upgrade, int offsetX, int offsetY, byte rotation, bool sort)
     {
         var ug = upgrade as UpgradeInstance;
     }
 
     [HarmonyPostfix]
-    static void Postfix(bool __result, object target, object upgrade, int offsetX, int offsetY, byte rotation)
+    static void Postfix(bool __result, object target, object upgrade, int offsetX, int offsetY, byte rotation, bool sort)
     {
         var ug = upgrade as UpgradeInstance;
     }
