@@ -1,5 +1,14 @@
 # Changelog
 
+## 1.3.2 (2026-01-02)
+
+### Features
+* **Ouroboros Mode Support**: Extended hex grid solver and grid clear functionalities to work in the new OuroGearWindow (Ouroboros mode upgrade screen)
+
+### Bug Fixes
+* **Grid Solver Completion**: Fixed solver coroutine not properly resetting after finding a solution, preventing stuck cancel button state
+* **Reflection Access**: Fixed property vs field access issues in window reflection code
+
 ## 1.3.1 (2026-01-02)
 
 ### Bug Fixes

@@ -14,7 +14,7 @@ public class SparrohPlugin : BaseUnityPlugin
 {
     public const string PluginGUID = "sparroh.enhancedupgrademenu";
     public const string PluginName = "EnhancedUpgradeMenu";
-    public const string PluginVersion = "1.3.1";
+    public const string PluginVersion = "1.3.2";
 
     private ConfigEntry<Key> TrashMarkKey;
     private ConfigEntry<Key> ScrollLeftKey;
@@ -234,6 +234,18 @@ public class SparrohPlugin : BaseUnityPlugin
                 if (onCloseCallbackMethod != null)
                 {
                     harmony.Patch(onCloseCallbackMethod, postfix: new HarmonyMethod(typeof(UpgradeSolverPatches.GearDetailsWindowClosePatch), "Postfix"));
+                }
+
+                var ouroOnOpenMethod = AccessTools.Method(typeof(OuroGearWindow), "OnOpen");
+                if (ouroOnOpenMethod != null)
+                {
+                    harmony.Patch(ouroOnOpenMethod, postfix: new HarmonyMethod(typeof(UpgradeSolverPatches.OuroGearWindowPatch), "Postfix"));
+                }
+
+                var ouroOnCloseCallbackMethod = AccessTools.Method(typeof(OuroGearWindow), "OnCloseCallback");
+                if (ouroOnCloseCallbackMethod != null)
+                {
+                    harmony.Patch(ouroOnCloseCallbackMethod, postfix: new HarmonyMethod(typeof(UpgradeSolverPatches.OuroGearWindowClosePatch), "Postfix"));
                 }
             }
             catch (Exception ex)

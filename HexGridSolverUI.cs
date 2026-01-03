@@ -22,7 +22,8 @@ public class SolverUI
     private readonly Color _defaultSecondaryColor = new(0.9434f, 0.9434f, 0.9434f, 1);
     private readonly Color _grayedOutColor = new(0.9434f, 0.9434f, 0.9434f, 0.1484f);
 
-    internal GearDetailsWindow? GearDetailsWindow;
+    internal IUpgradeWindow? UpgradeWindow;
+    internal IUpgradable? CurrentGear;
 
     private readonly Dictionary<int, UnityEvent> _originalOnHoverEnters = new();
     private Dictionary<int, GearUpgradeUI> _selectedUpgrades = new();
@@ -34,9 +35,10 @@ public class SolverUI
     private readonly InputActionMap _solverControls;
     private readonly InputAction _addForSolve;
 
-    public SolverUI(GearDetailsWindow? gearDetailsWindow)
+    public SolverUI(IUpgradeWindow? upgradeWindow, IUpgradable? currentGear)
     {
-        GearDetailsWindow = gearDetailsWindow;
+        UpgradeWindow = upgradeWindow;
+        CurrentGear = currentGear;
 
         _solverControls = new InputActionMap("SolverControls");
         _addForSolve = _solverControls.AddAction("AddForSolve");
@@ -103,16 +105,15 @@ public class SolverUI
 
     internal void RebuildSelectedUpgrades()
     {
+        if (UpgradeWindow is null) return;
 
-        if (GearDetailsWindow is null) return;
-
-        var upgradeListParentField = GetPrivateField("upgradeListParent", GearDetailsWindow.GetType());
+        var upgradeListParentField = GetPrivateField("upgradeListParent", UpgradeWindow.GetType());
         var buttonField = GetPrivateField("button", typeof(GearUpgradeUI));
         var hoverColorField = GetPrivateField("hoverColor", typeof(Pigeon.UI.DefaultButton));
 
         if (upgradeListParentField == null || buttonField == null) return;
 
-        var upgradeListParent = upgradeListParentField.GetValue(GearDetailsWindow) as Transform;
+        var upgradeListParent = upgradeListParentField.GetValue(UpgradeWindow) as Transform;
         if (upgradeListParent == null) return;
 
         var upgradeUIs = upgradeListParent.GetComponentsInChildren<GearUpgradeUI>().Where(x => _selectedUpgrades.ContainsKey(x.Upgrade.InstanceID)).ToList();
@@ -171,7 +172,7 @@ public class SolverUI
 
     public void OnGUI()
     {
-        if (GearDetailsWindow == null || !GearDetailsWindow.gameObject.activeInHierarchy) return;
+        if (UpgradeWindow == null || !((UnityEngine.Component)UpgradeWindow).gameObject.activeInHierarchy) return;
         if (!_showSolveButton) return;
 
         float buttonX = 10f;
@@ -191,7 +192,7 @@ public class SolverUI
                 .OrderByDescending(u => u.Upgrade.Name == "Boundary Incursion" ? int.MaxValue : u.GetPattern().GetCellCount())
                 .ToList();
 
-            var solver = new Solver(GearDetailsWindow, upgrades);
+            var solver = new Solver(UpgradeWindow, CurrentGear, upgrades);
             if (!solver.CanFitAll())
             {
                 ShowError("Solve Error", "The selected upgrades cannot fit in the available space.");
@@ -210,6 +211,7 @@ public class SolverUI
                     }
                     _selectedUpgrades.Clear();
                     _solveButtonEnabled = false;
+                    UpgradeSolver.Instance.SolverCoroutine = null;
                 });
             }
         }
@@ -250,11 +252,11 @@ public class SolverUI
 
     internal void PatchUpgradeClick()
     {
-        if (GearDetailsWindow is null) return;
+        if (UpgradeWindow is null) return;
 
         _solverControls.Enable();
 
-        var upgradeListParentField = GetPrivateField("upgradeListParent", GearDetailsWindow.GetType());
+        var upgradeListParentField = GetPrivateField("upgradeListParent", UpgradeWindow.GetType());
         var buttonField = GetPrivateField("button", typeof(GearUpgradeUI));
 
         if (upgradeListParentField == null || buttonField == null)
@@ -262,7 +264,7 @@ public class SolverUI
             return;
         }
 
-        var upgradeListParent = upgradeListParentField.GetValue(GearDetailsWindow) as Transform;
+        var upgradeListParent = upgradeListParentField.GetValue(UpgradeWindow) as Transform;
         if (upgradeListParent == null)
         {
             return;

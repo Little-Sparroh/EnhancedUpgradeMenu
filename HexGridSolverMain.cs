@@ -6,16 +6,17 @@ public class UpgradeSolver
     public Coroutine? SolverCoroutine;
 
     internal static UpgradeSolver Instance;
-    internal SolverUI SolverUI = new(null);
+    internal SolverUI SolverUI = new(null, null);
 
     public void Update()
     {
         SolverUI.Update();
     }
 
-    internal void OnGearDetailsWindowOpen(GearDetailsWindow window, MonoBehaviour mono)
+    internal void OnUpgradeWindowOpen(IUpgradeWindow window, IUpgradable gear, MonoBehaviour mono)
     {
-        SolverUI.GearDetailsWindow = window;
+        SolverUI.UpgradeWindow = window;
+        SolverUI.CurrentGear = gear;
         SolverUI.OnWindowOpened();
         SolverUI.PatchUpgradeClick();
         mono.StartCoroutine(DelayPatch());
@@ -27,7 +28,7 @@ public class UpgradeSolver
         SolverUI.PatchUpgradeClick();
     }
 
-    internal void OnGearDetailsWindowClosed()
+    internal void OnUpgradeWindowClosed()
     {
         SolverUI.Close();
     }

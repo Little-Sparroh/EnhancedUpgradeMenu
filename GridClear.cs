@@ -6,6 +6,9 @@ using UnityEngine;
 
 public static class GridClearMod
 {
+    private static readonly PropertyInfo _upgradablePrefabProperty = typeof(GearDetailsWindow).GetProperty("UpgradablePrefab", BindingFlags.Public | BindingFlags.Instance);
+    private static readonly FieldInfo _selectedGearField = typeof(OuroGearWindow).GetField("selectedGear", BindingFlags.NonPublic | BindingFlags.Instance);
+
     public static void Initialize()
     {
     }
@@ -14,8 +17,22 @@ public static class GridClearMod
     {
         if (Menu.Instance != null && Menu.Instance.IsOpen)
         {
-            var topWindow = Menu.Instance.WindowSystem.GetTop() as GearDetailsWindow;
-            if (topWindow != null)
+            var topWindow = Menu.Instance.WindowSystem.GetTop();
+            IUpgradeWindow upgradeWindow = topWindow as GearDetailsWindow;
+            IUpgradable gear = null;
+            if (upgradeWindow != null)
+            {
+                gear = _upgradablePrefabProperty?.GetValue(upgradeWindow) as IUpgradable;
+            }
+            else
+            {
+                upgradeWindow = topWindow as OuroGearWindow;
+                if (upgradeWindow != null)
+                {
+                    gear = _selectedGearField?.GetValue(upgradeWindow) as IUpgradable;
+                }
+            }
+            if (upgradeWindow != null && gear != null)
             {
                 float buttonX = 10f;
                 float buttonY = Screen.height - 60f;
@@ -23,13 +40,13 @@ public static class GridClearMod
                 float buttonHeight = 50f;
                 if (GUI.Button(new Rect(buttonX, buttonY, buttonWidth, buttonHeight), "Clear Grid"))
                 {
-                    ClearAllUpgrades(topWindow);
+                    ClearAllUpgrades(upgradeWindow, gear);
                 }
             }
         }
     }
 
-    private static void ClearAllUpgrades(GearDetailsWindow window)
+    private static void ClearAllUpgrades(IUpgradeWindow window, IUpgradable gear)
     {
         var equipSlots = GetEquipSlots(window);
         if (equipSlots == null) return;
@@ -49,12 +66,12 @@ public static class GridClearMod
         var sortedUpgrades = upgradesToClear.OrderBy(u => u.Upgrade.Name == "Boundary Incursion" ? 1 : 0).ToList();
         foreach (var upgrade in sortedUpgrades)
         {
-            equipSlots.Unequip(window.UpgradablePrefab, upgrade);
+            equipSlots.Unequip(gear, upgrade);
         }
     }
 
-    private static ModuleEquipSlots GetEquipSlots(GearDetailsWindow window)
+    private static ModuleEquipSlots GetEquipSlots(IUpgradeWindow window)
     {
-        return (ModuleEquipSlots)typeof(GearDetailsWindow).GetField("equipSlots", BindingFlags.NonPublic | BindingFlags.Instance)?.GetValue(window);
+        return (ModuleEquipSlots)window.GetType().GetField("equipSlots", BindingFlags.NonPublic | BindingFlags.Instance)?.GetValue(window);
     }
 }

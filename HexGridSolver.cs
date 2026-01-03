@@ -119,7 +119,7 @@ public class Solver
     private static readonly FieldInfo _hexMapWidthField = GetPrivateField("width", typeof(HexMap));
     private static readonly FieldInfo _hexMapHeightField = GetPrivateField("height", typeof(HexMap));
 
-    private readonly GearDetailsWindow _gearDetailsWindow;
+    private readonly IUpgradeWindow _upgradeWindow;
     private readonly List<UpgradeInstance> _upgrades;
     private readonly IUpgradable _gear;
     private readonly ModuleEquipSlots _equipSlots;
@@ -131,12 +131,12 @@ public class Solver
 
     private bool _foundSolution;
 
-    public Solver(GearDetailsWindow gearDetailsWindow, List<UpgradeInstance> upgrades)
+    public Solver(IUpgradeWindow upgradeWindow, IUpgradable gear, List<UpgradeInstance> upgrades)
     {
-        _gearDetailsWindow = gearDetailsWindow;
+        _upgradeWindow = upgradeWindow;
         _upgrades = upgrades;
-        _gear = gearDetailsWindow.UpgradablePrefab;
-        _equipSlots = GetPrivateField("equipSlots", gearDetailsWindow.GetType())?.GetValue(gearDetailsWindow) as ModuleEquipSlots;
+        _gear = gear;
+        _equipSlots = GetPrivateField("equipSlots", upgradeWindow.GetType())?.GetValue(upgradeWindow) as ModuleEquipSlots;
 
         var hxmpField = GetPrivateField("hexMap", typeof(ModuleEquipSlots));
         if (_equipSlots != null && hxmpField != null)
@@ -246,7 +246,7 @@ public class Solver
             return;
         }
 
-        var prefab = _gearDetailsWindow.UpgradablePrefab;
+        var prefab = _gear;
 
         var gearUpgrades = PlayerData.GetAllUpgrades(prefab);
 
